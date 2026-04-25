@@ -1,0 +1,78 @@
+# MiniMOBA default configuration
+
+environment:
+  map_size: 32
+  team_size: 4
+  max_steps: 1000
+  fog_of_war: true
+  seed: 42
+
+hero_assignments:
+  red_0: tank
+  red_1: dps
+  red_2: dps
+  red_3: support
+  blue_0: tank
+  blue_1: dps
+  blue_2: dps
+  blue_3: support
+
+reward:
+  kill: 1.0
+  death: -0.8
+  assist: 0.3
+  tower: 2.0
+  tower_lost: -2.0
+  farm: 0.1
+  damage: 0.01
+  heal: 0.01
+  win: 5.0
+  lose: -5.0
+  time_penalty: -0.001
+  gold_gain: 0.001
+  exp_gain: 0.0005
+
+training:
+  total_timesteps: 3000000
+  n_envs: 4
+  gamma: 0.99
+  gae_lambda: 0.95
+  learning_rate: 0.0003
+  n_epochs: 6
+  batch_size: 128
+  max_grad_norm: 0.5
+  clip_eps: 0.2
+  dual_clip_c: 3.0
+  entropy_coef: 0.01
+  value_loss_coef: 0.5
+  normalize_advantage: true
+  entropy_schedule: linear_decay
+  entropy_start: 0.05
+  entropy_end: 0.001
+
+self_play:
+  pool_size: 10
+  win_threshold: 0.55
+  n_eval_games: 50
+  recent_opponent_prob: 0.8
+
+curriculum:
+  levels:
+    - map_size: 16
+      team_size: 2
+      skills_enabled: true
+      opponent: rule_based
+    - map_size: 24
+      team_size: 3
+      skills_enabled: true
+      opponent: rule_based
+    - map_size: 32
+      team_size: 4
+      skills_enabled: true
+      opponent: self_play
+
+evaluation:
+  eval_interval: 30000
+  n_eval_episodes: 50
+  opponents: ["rule_based", "self"]
+  metrics: ["win_rate", "avg_reward", "avg_episode_length", "kda_ratio"]
