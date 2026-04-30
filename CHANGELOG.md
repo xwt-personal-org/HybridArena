@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Added baseline experiment config support for ablation runner (`--config`, `--dry-run`).
+- Added planner trace schema (`PlannerTrace`) and JSONL recorder (`PlannerTraceRecorder`).
+- Added evaluator metrics consistency tests with required fields validation.
+
+### Changed
+- Expanded CI test coverage from MiniMOBA-only to the full package.
+- Updated result tables with `draw_rate`, `avg_towers_destroyed`, `avg_tower_hp_advantage` columns.
+
+### Fixed
+- Fixed documentation status inconsistency around GRPO/QLoRA implementation status.
+- Fixed `env.close()` crash when pygame is not installed (now handles ImportError gracefully).
+- Added missing `episodes` field to evaluator result dict.
+
 ## v0.2.0 - training correctness and objective game milestone
 
 ### Fixed

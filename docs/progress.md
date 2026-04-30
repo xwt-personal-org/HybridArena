@@ -2,9 +2,9 @@
 
 ## 当前状态
 
-- 当前阶段：全部模块完成
+- 当前阶段：Phase F（验证、纠偏与正式实验准备）
 - 最后更新：2026-04-30
-- 状态：模块 0-7 已完成，最终验证通过
+- 状态：模块 0-7 已完成，Phase F 进行中
 
 ## 模块进度
 
@@ -79,6 +79,49 @@
 - [x] Step 7.1：重写 README 的结果章节
 - [x] Step 7.2：生成首版实验报告
 - [x] Step 7.3：准备 GitHub release v0.2.0
+
+## Phase F：验证、纠偏与正式实验准备
+
+### 模块 F0：建立验证基线
+
+- [x] Step F0.1：安装完整开发依赖
+- [x] Step F0.2：运行完整静态验证
+- [x] Step F0.3：运行完整测试套件
+  - 修复：`env.close()` 中 pygame import 改为 try/except，避免无 pygame 时崩溃
+
+### 模块 F1：扩展 CI，避免只测 minimoba
+
+- [x] Step F1.1：更新 CI 测试范围为 `pytest hybrid_arena -v`
+- [x] Step F1.2：CI 安装命令改为 `".[dev,rl]"`，不安装 `llm`
+
+### 模块 F2：修正文档状态口径
+
+- [x] Step F2.1：修正 README GRPO/QLoRA 矛盾
+  - 亮点、Phase D 状态、Known Limitations 三者统一为"实验性 / skeleton complete"
+- [x] Step F2.2：更新实验报告，增加 smoke 参数说明、正式 benchmark 警告、下一步实验矩阵
+
+### 模块 F3：正式 Baseline 实验矩阵
+
+- [x] Step F3.1：创建 `configs/experiments/baseline_v1.yaml`
+- [x] Step F3.2：`run_ablation.py` 支持 `--config` 和 `--dry-run`
+- [x] Step F3.3：创建并验证 `configs/experiments/baseline_smoke.yaml`
+
+### 模块 F4：审计 win_rate 与 objective 指标
+
+- [x] Step F4.1：新增 evaluator 指标一致性测试，包含 episodes 字段
+- [x] Step F4.2：结果表增加 `draw_rate`、`avg_towers_destroyed`、`avg_tower_hp_advantage`
+
+### 模块 F5：Planner Trace 数据接口
+
+- [x] Step F5.1：定义 `PlannerTrace` dataclass + schema
+- [x] Step F5.2：实现 `PlannerTraceRecorder`（JSONL 输出）
+- [x] Step F5.3：`play_planner.py` 支持 `--trace-output` 参数
+
+### 模块 F6：更新进度与问题文档
+
+- [x] Step F6.1：更新 `docs/progress.md`
+- [x] Step F6.2：更新 `docs/issues.md`
+- [x] Step F6.3：更新 `CHANGELOG.md`
 
 ## 已知问题
 

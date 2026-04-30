@@ -51,3 +51,9 @@ grpo_lora_weights/
 # Env
 .env
 .env.local
+
+# Claude Code local config
+.claude/
+
+# Experiment outputs
+results/

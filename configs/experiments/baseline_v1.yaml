@@ -1,0 +1,17 @@
+experiment:
+  name: baseline_v1
+  seeds: [42, 123, 456]
+  algorithms: [ppo, ppo_dualclip]
+  opponents: [random, rule_based]
+  episodes: 30
+  max_steps: 500
+
+training:
+  total_timesteps: 100000
+  num_steps: 128
+  num_envs: 4
+  device: cpu
+
+outputs:
+  checkpoint_dir: checkpoints/baseline_v1
+  result_dir: results/baseline_v1

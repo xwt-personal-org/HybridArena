@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from typing import Any
 
 
 @dataclass
@@ -13,6 +14,9 @@ class PlannerState:
     enemy_summary: dict
     objective_summary: dict
     score_summary: dict
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 def summarize_game_state(game_state, team: str) -> PlannerState:

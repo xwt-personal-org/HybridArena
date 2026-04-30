@@ -1,0 +1,17 @@
+experiment:
+  name: baseline_smoke
+  seeds: [42]
+  algorithms: [ppo, ppo_dualclip]
+  opponents: [random, rule_based]
+  episodes: 1
+  max_steps: 20
+
+training:
+  total_timesteps: 512
+  num_steps: 32
+  num_envs: 1
+  device: cpu
+
+outputs:
+  checkpoint_dir: checkpoints/baseline_smoke
+  result_dir: results/baseline_smoke

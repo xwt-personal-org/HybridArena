@@ -13,7 +13,7 @@
 - **5种DRL算法统一对比**：PPO / Dual-clip PPO / MAPPO / QMIX / COMA
 - **Self-Play + ELO + Curriculum Learning**：完整的对手池管理和自适应难度调度
 - **LLM高层规划器**：StateTranslator + 策略桥接 + mock/API/local 三种推理模式
-- **QLoRA GRPO 训练**：在消费级GPU上微调1.5B LLM战术规划器
+- **QLoRA GRPO 训练（实验性）**：离线可测训练管线骨架，支持在消费级GPU上微调1.5B LLM战术规划器，正式训练待 planner trace 数据闭环
 - **严谨消融实验框架**：Evaluator + W&B logger + 多seed实验配置
 
 ## 快速开始
@@ -151,7 +151,7 @@ pytest hybrid_arena/training/tests/ -v
 | Phase A | 环境 + Rule-Based Baseline | 完成 |
 | Phase B | 5种DRL算法 + Self-Play + Evaluator | 完成 |
 | Phase C | LLM Planner (StateTranslator + LangGraph + Bridge) | 完成 |
-| Phase D | QLoRA GRPO 训练管线 | 完成 |
+| Phase D | QLoRA GRPO 训练管线（实验性 / skeleton complete，正式训练待 planner trace 数据） | 实验性 |
 | Phase E | Streamlit Demo + 文档 | 完成 |
 
 ## 当前实现状态
@@ -186,7 +186,7 @@ python -m hybrid_arena.scripts.play_planner --planner rule --max-steps 50 --rend
 
 - 当前 ablation 默认 smoke 参数用于验证流水线，不代表正式算法结论。
 - LLM Planner MVP 默认使用 DummyLLMClient 或 RulePlanner，测试不调用外部 API。
-- GRPO/QLoRA 不在本阶段实现，需在 RL baseline 稳定后再接入。
+- GRPO/QLoRA 当前为离线可测训练管线骨架（mock 模式可运行全部测试），尚未完成真实策略数据闭环与正式 benchmark。
 
 ## License
 

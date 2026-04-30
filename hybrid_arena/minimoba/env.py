@@ -156,9 +156,11 @@ class MiniMOBAEnv(ParallelEnv):
         return self.game_state is not None and self.game_state.is_game_over()
 
     def close(self):
-        import pygame
-
-        pygame.quit()
+        try:
+            import pygame
+            pygame.quit()
+        except ImportError:
+            pass
 
 
 def parallel_env(**kwargs):

@@ -115,6 +115,7 @@ def evaluate_policy(
     total_steps = sum(episode_lengths)
 
     return {
+        "episodes": total_games,
         "win_rate": win_rate,
         "draw_rate": draws / total_games if total_games > 0 else 0.0,
         "red_wins": red_wins,
