@@ -1,0 +1,17 @@
+# HybridArena 问题记录
+
+> Codex 在执行中遇到 `docs/plan.md` 未覆盖的情况时记录于此。
+
+## 当前执行阻塞
+
+（暂无）
+
+## 已知但已纳入计划的问题
+
+- action mask 语义不一致：已纳入模块 1、模块 2。
+- PPO clipped value loss 无效：已纳入模块 2。
+- DualClipPPO 指标错误：已纳入模块 2。
+- 塔、基地、队伍经济未闭环：已纳入模块 3。
+- `num_envs` 未使用：已纳入模块 5。
+- 训练 CLI、评估器、checkpoint 缺失：已纳入模块 4。
+- LLM Planner 目录为空：已纳入模块 6。

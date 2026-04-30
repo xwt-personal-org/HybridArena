@@ -1,0 +1,27 @@
+{
+  "win_rate": 0.0,
+  "draw_rate": 0.3333333333333333,
+  "red_wins": 0,
+  "blue_wins": 2,
+  "draws": 1,
+  "avg_reward": 6.706458333333416,
+  "avg_length": 1000.0,
+  "avg_episode_length": 1000.0,
+  "avg_kills": 0.3333333333333333,
+  "avg_deaths": 0.6666666666666666,
+  "avg_towers_destroyed": 1.3333333333333333,
+  "avg_tower_hp_advantage": -580.0,
+  "fps": 708.1786169196835,
+  "total_kills_red": 1,
+  "total_kills_blue": 2,
+  "args": {
+    "checkpoint": null,
+    "algorithm": "ppo",
+    "opponent": "rule_based",
+    "n_episodes": 3,
+    "seed": 42,
+    "device": "cpu",
+    "output": "results\\eval_smoke.json",
+    "baseline": null
+  }
+}

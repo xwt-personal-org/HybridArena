@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from hybrid_arena.algorithms.networks import ActorCritic
 from hybrid_arena.algorithms.ppo.config import PPOConfig
@@ -55,6 +54,7 @@ class PPO:
         advantages: torch.Tensor,
         returns: torch.Tensor,
         action_masks: torch.Tensor | None,
+        old_values: torch.Tensor,
     ) -> tuple[torch.Tensor, dict[str, float]]:
         """Compute PPO loss for a minibatch.
 
@@ -65,6 +65,7 @@ class PPO:
             advantages: (B,) GAE advantages (normalized).
             returns: (B,) GAE returns (value targets).
             action_masks: (B, 324) or None.
+            old_values: (B,) value estimates saved during rollout.
 
         Returns:
             total_loss, info dict.
@@ -84,16 +85,14 @@ class PPO:
         surrogate2 = clipped_ratio * advantages
         policy_loss = -torch.min(surrogate1, surrogate2).mean()
 
-        # Value loss (clipped to prevent large updates)
-        value_pred_clipped = new_values + torch.clamp(
-            new_values - new_values.detach(),  # detach to avoid gradient through clip
+        value_pred_clipped = old_values + torch.clamp(
+            new_values - old_values,
             -self.config.clip_eps,
             self.config.clip_eps,
         )
-        value_loss = 0.5 * torch.max(
-            F.mse_loss(new_values, returns),
-            F.mse_loss(value_pred_clipped, returns),
-        )
+        value_losses = (new_values - returns) ** 2
+        value_losses_clipped = (value_pred_clipped - returns) ** 2
+        value_loss = 0.5 * torch.max(value_losses, value_losses_clipped).mean()
 
         # Entropy bonus
         entropy_coef = self.get_entropy_coef(self.global_step, self.total_timesteps)
@@ -127,6 +126,7 @@ class PPO:
         advantages: torch.Tensor,
         returns: torch.Tensor,
         action_masks: torch.Tensor | None = None,
+        old_values: torch.Tensor | None = None,
     ) -> dict[str, float]:
         """Run one PPO update epoch.
 
@@ -137,11 +137,14 @@ class PPO:
             advantages: (B_q,).
             returns: (B_q,).
             action_masks: (B_q, 324) or None.
+            old_values: (B_q,) rollout value estimates.
 
         Returns:
             Dict of training metrics.
         """
         total_batch = actions.shape[0]
+        if old_values is None:
+            raise ValueError("old_values is required for PPO clipped value loss")
         indices = torch.randperm(total_batch)
 
         epoch_info = {}
@@ -158,6 +161,7 @@ class PPO:
                 advantages[mb_idx],
                 returns[mb_idx],
                 action_masks[mb_idx] if action_masks is not None else None,
+                old_values[mb_idx],
             )
 
             self.optimizer.zero_grad()

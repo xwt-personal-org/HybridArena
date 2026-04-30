@@ -11,6 +11,8 @@ from collections import defaultdict
 import numpy as np
 import torch
 
+from hybrid_arena.minimoba.action_encoding import N_ACTIONS
+
 
 class RolloutBuffer:
     def __init__(
@@ -33,6 +35,7 @@ class RolloutBuffer:
         self.rewards: list[np.ndarray] = []
         self.dones: list[np.ndarray] = []
         self.values: list[np.ndarray] = []
+        self.action_masks: list[np.ndarray] = []
 
         self.step_idx = 0
 
@@ -44,6 +47,7 @@ class RolloutBuffer:
         self.rewards.clear()
         self.dones.clear()
         self.values.clear()
+        self.action_masks.clear()
 
     def add(
         self,
@@ -53,6 +57,7 @@ class RolloutBuffer:
         reward_batch: np.ndarray,
         done_batch: np.ndarray,
         value_batch: np.ndarray,
+        action_mask_batch: np.ndarray,
     ):
         """Store one step of rollout.
 
@@ -64,6 +69,7 @@ class RolloutBuffer:
         self.rewards.append(reward_batch)
         self.dones.append(done_batch)
         self.values.append(value_batch)
+        self.action_masks.append(action_mask_batch)
         self.step_idx += 1
 
     @property
@@ -93,6 +99,7 @@ class RolloutBuffer:
         val = np.stack(self.values, axis=0)    # (N_steps, N_agents)
         act = np.stack(self.actions, axis=0)    # (N_steps, N_agents, 3)
         logp = np.stack(self.log_probs, axis=0) # (N_steps, N_agents)
+        mask = np.stack(self.action_masks, axis=0)  # (N_steps, N_agents, 324)
 
         # GAE per agent
         advantages = np.zeros((n_steps, n_agents), dtype=np.float32)
@@ -113,13 +120,16 @@ class RolloutBuffer:
 
         # Flatten to (T * N_agents, ...)
         batch_obs = self._flatten_obs()
-        return {
+        batch = {
             "obs": batch_obs,
             "actions": torch.tensor(act.reshape(-1, act.shape[-1]), dtype=torch.int64, device=self.device),
             "log_probs": torch.tensor(logp.reshape(-1), dtype=torch.float32, device=self.device),
             "advantages": torch.tensor(advantages.reshape(-1), dtype=torch.float32, device=self.device),
             "returns": torch.tensor(returns.reshape(-1), dtype=torch.float32, device=self.device),
+            "action_masks": torch.tensor(mask.reshape(-1, N_ACTIONS), dtype=torch.int8, device=self.device),
+            "old_values": torch.tensor(val.reshape(-1), dtype=torch.float32, device=self.device),
         }
+        return batch
 
     def _flatten_obs(self) -> dict[str, torch.Tensor]:
         """Flatten observation dict from T steps to (T * N_agents, ...)."""

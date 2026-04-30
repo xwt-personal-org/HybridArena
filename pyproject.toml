@@ -7,7 +7,7 @@ name = "hybrid_arena"
 version = "0.1.0"
 description = "LLM x DRL hybrid agent platform for partially observable strategy games"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 license = { text = "MIT" }
 authors = [{ name = "HybridArena Team" }]
 keywords = ["reinforcement-learning", "multi-agent", "game-ai", "ppo", "moba"]
@@ -69,6 +69,7 @@ addopts = "-v --tb=short"
 markers = [
     "slow: marks tests as slow (deselect with -m 'not slow')",
     "gpu: marks tests requiring a GPU (deselect with -m 'not gpu')",
+    "smoke: fast end-to-end smoke tests",
 ]
 
 [tool.ruff]

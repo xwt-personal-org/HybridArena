@@ -14,7 +14,6 @@ Reference:
 from __future__ import annotations
 
 import torch
-import torch.nn.functional as F
 
 from hybrid_arena.algorithms.ppo.ppo import PPO
 
@@ -41,7 +40,11 @@ class DualClipPPO(PPO):
         advantages,
         returns,
         action_masks=None,
+        old_values=None,
     ):
+        if old_values is None:
+            raise ValueError("old_values is required for DualClipPPO clipped value loss")
+
         _, new_log_probs, entropy, new_values = self.network.get_action_and_value(
             obs, actions, action_masks
         )
@@ -53,28 +56,20 @@ class DualClipPPO(PPO):
         surrogate1 = ratio * advantages
         surrogate2 = clipped_ratio * advantages
 
-        # Standard clip — upper bound
-        policy_loss = torch.min(surrogate1, surrogate2)
-
-        # Dual clip — lower bound for negative advantages
-        dual_clip_mask = (advantages < 0).float()
+        standard_surrogate = torch.min(surrogate1, surrogate2)
         dual_clip_value = self.dual_clip_c * advantages
-        policy_loss = (
-            dual_clip_mask * torch.max(policy_loss, dual_clip_value)
-            + (1.0 - dual_clip_mask) * policy_loss
-        )
-        policy_loss = -policy_loss.mean()
+        use_dual = (advantages < 0) & (standard_surrogate < dual_clip_value)
+        policy_objective = torch.where(use_dual, dual_clip_value, standard_surrogate)
+        policy_loss = -policy_objective.mean()
 
-        # Value loss (clipped)
-        value_pred_clipped = new_values + torch.clamp(
-            new_values - new_values.detach(),
+        value_pred_clipped = old_values + torch.clamp(
+            new_values - old_values,
             -self.config.clip_eps,
             self.config.clip_eps,
         )
-        value_loss = 0.5 * torch.max(
-            F.mse_loss(new_values, returns),
-            F.mse_loss(value_pred_clipped, returns),
-        )
+        value_losses = (new_values - returns) ** 2
+        value_losses_clipped = (value_pred_clipped - returns) ** 2
+        value_loss = 0.5 * torch.max(value_losses, value_losses_clipped).mean()
 
         entropy_coef = self.get_entropy_coef(self.global_step, self.total_timesteps)
         entropy_loss = -entropy.mean()
@@ -90,9 +85,7 @@ class DualClipPPO(PPO):
             clip_frac = (
                 (ratio - 1.0).abs() > self.config.clip_eps
             ).float().mean().item()
-            dual_frac = (
-                dual_clip_mask * (policy_loss.detach() == dual_clip_value).float()
-            ).mean().item()
+            dual_frac = use_dual.float().mean().item()
 
         info = {
             "policy_loss": policy_loss.item(),

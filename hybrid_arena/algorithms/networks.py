@@ -11,6 +11,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from hybrid_arena.minimoba.action_encoding import N_ACTIONS, N_SKILL, N_TARGET
+
 
 class MapEncoder(nn.Module):
     """CNN encoder for (11, 11, 11) local map observations.
@@ -109,7 +111,7 @@ class ActorCritic(nn.Module):
 
     Design decisions:
     1. Shared encoder backbone (MapEncoder + StateEncoder) for actor and critic
-    2. Three independent actor heads (move/skill/target) — better than one 324-way softmax
+    2. Three actor heads build joint 324-way logits for exact action-mask semantics
     3. Critic head separate from actor heads
     4. Action masking: illegal action logits set to -inf before softmax
     """
@@ -145,6 +147,20 @@ class ActorCritic(nn.Module):
         )
         return torch.cat([map_feat, state_feat], dim=-1)
 
+    def _build_joint_logits(
+        self,
+        move_logits: torch.Tensor,
+        skill_logits: torch.Tensor,
+        target_logits: torch.Tensor,
+    ) -> torch.Tensor:
+        batch_size = move_logits.shape[0]
+        joint = (
+            move_logits[:, :, None, None]
+            + skill_logits[:, None, :, None]
+            + target_logits[:, None, None, :]
+        )
+        return joint.reshape(batch_size, N_ACTIONS)
+
     def get_action_and_value(
         self,
         obs: dict[str, torch.Tensor],
@@ -170,37 +186,25 @@ class ActorCritic(nn.Module):
         skill_logits = self.skill_head(features)
         target_logits = self.target_head(features)
 
-        # Apply action mask
+        joint_logits = self._build_joint_logits(move_logits, skill_logits, target_logits)
         if action_mask is not None:
-            move_mask = action_mask[:, :9].bool()
-            skill_mask = action_mask[:, 9:13].bool()
-            target_mask = action_mask[:, 13:22].bool()
+            joint_logits = joint_logits.masked_fill(action_mask <= 0, -1e8)
 
-            move_logits = move_logits.masked_fill(~move_mask, -1e8)
-            skill_logits = skill_logits.masked_fill(~skill_mask, -1e8)
-            target_logits = target_logits.masked_fill(~target_mask, -1e8)
-
-        move_dist = torch.distributions.Categorical(logits=move_logits)
-        skill_dist = torch.distributions.Categorical(logits=skill_logits)
-        target_dist = torch.distributions.Categorical(logits=target_logits)
+        dist = torch.distributions.Categorical(logits=joint_logits)
 
         if action is None:
-            move_action = move_dist.sample()
-            skill_action = skill_dist.sample()
-            target_action = target_dist.sample()
+            flat_action = dist.sample()
+            move_action = flat_action // (N_SKILL * N_TARGET)
+            skill_action = (flat_action % (N_SKILL * N_TARGET)) // N_TARGET
+            target_action = flat_action % N_TARGET
         else:
             move_action = action[:, 0]
             skill_action = action[:, 1]
             target_action = action[:, 2]
+            flat_action = move_action * (N_SKILL * N_TARGET) + skill_action * N_TARGET + target_action
 
-        log_prob = (
-            move_dist.log_prob(move_action)
-            + skill_dist.log_prob(skill_action)
-            + target_dist.log_prob(target_action)
-        )
-        entropy = (
-            move_dist.entropy() + skill_dist.entropy() + target_dist.entropy()
-        )
+        log_prob = dist.log_prob(flat_action)
+        entropy = dist.entropy()
 
         value = self.critic(features).squeeze(-1)
 

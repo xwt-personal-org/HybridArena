@@ -128,6 +128,7 @@ class MiniMOBAEnv(ParallelEnv):
             if hero:
                 infos[agent]["hp_ratio"] = hero.hp_ratio
                 infos[agent]["alive"] = hero.alive
+                infos[agent].update(self.game_state.get_objective_info(hero.team))
 
         # Remove terminated/truncated agents
         self.agents = [

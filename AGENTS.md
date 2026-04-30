@@ -1,7 +1,10 @@
 # HybridArena — Project Workspace
 
 ## Project Status
-Phase A (environment + baseline) implemented and tested. Phase B (PPO/DualClipPPO + training) implemented, end-to-end validated.
+Phase A (environment + baseline) ✅ | Phase B (5 DRL algorithms + Self-Play + training) ✅ | Phase C (LLM Planner) ✅ | Phase D (GRPO) ✅ | Phase E (Demo + README) ✅
+
+All core components implemented and tested (63/64 tests pass, 1 skipped = pygame rendering).
+Short training validated: PPO reward rises, entropy drops, Self-Play pool updates correctly.
 
 ## Hardware Constraint
 - **Target hardware: RTX 4060 Laptop (8GB VRAM)**
@@ -20,17 +23,29 @@ hybrid_arena/
 │   ├── renderer.py    #   Pygame 2D renderer
 │   ├── wrappers.py    #   SingleAgentWrapper (Gymnasium Env)
 │   ├── agents/        #   RandomAgent, RuleBasedAgent (FSM baseline)
-│   └── tests/         #   API compliance, env correctness, reward tests
-├── algorithms/        # PPO/MAPPO/QMIX/COMA + dual-clip PPO
-│   ├── networks.py    #   MapEncoder, StateEncoder, ActorCritic (164K params) ✅
-│   └── ppo/           #   PPO + DualClipPPO (GAE, clipped value, dual-clip) ✅
-├── agents/            # Agent registry (TODO: RL agents)
-├── training/          # Trainer, buffer, evaluator, GRPO (TODO)
-├── inference/         # LLM planner (Qwen2.5-1.5B/3B) (TODO)
-├── demo/              # Streamlit demo (TODO)
+│   └── tests/         #   API compliance, env correctness, reward tests ✅
+├── algorithms/        # 5 DRL algorithms + Self-Play ✅
+│   ├── networks.py    #   MapEncoder, StateEncoder, ActorCritic (~1.2M params) ✅
+│   ├── ppo/           #   PPO + DualClipPPO (GAE, clipped value, dual-clip) ✅
+│   ├── mappo/         #   MAPPO (CTDE centralized critic) ✅
+│   ├── qmix/          #   QMIX (monotonic value decomposition) ✅
+│   ├── coma/          #   COMA (counterfactual baseline) ✅
+│   └── self_play/     #   SelfPlayManager + ELO + CurriculumScheduler ✅
+├── training/          # Trainer, buffer, evaluator, GRPO ✅
+│   ├── trainer.py     #   PPO/MAPPO training loop with Self-Play integration ✅
+│   ├── buffer.py      #   Rollout Buffer (GAE) with action_mask storage ✅
+│   ├── evaluator.py   #   Win-rate / KDA / ELO evaluation ✅
+│   ├── logger.py      #   W&B logging wrapper ✅
+│   └── grpo_trainer.py  # QLoRA GRPO for LLM planner ✅
+├── inference/         # LLM planner ✅
+│   ├── state_translator.py  # GameState -> natural language ✅
+│   ├── llm_planner.py       # Mock/API/Local LLM + state machine ✅
+│   └── strategy_bridge.py   # Strategy -> reward shaping + goals ✅
+├── demo/              # Streamlit demo skeleton ✅
+│   └── app.py
 ├── configs/           # YAML configs
 │   └── default.yaml   #   Environment + training defaults
-└── scripts/           # play_human.py, benchmark_fps.py
+└── scripts/           # play_human.py, benchmark_fps.py, train_smoke_test.py
 ```
 
 ## Tech Stack

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from hybrid_arena.minimoba.action_encoding import N_ACTIONS, encode_action
 from hybrid_arena.minimoba.hero import DEFAULT_HERO_ASSIGNMENTS, HERO_POOL, HeroState
 from hybrid_arena.minimoba.map_generator import (
     BLUE_BASE,
@@ -15,6 +16,7 @@ from hybrid_arena.minimoba.map_generator import (
     RED_TOWER,
     generate_map,
 )
+from hybrid_arena.minimoba.objectives import StructureState
 from hybrid_arena.minimoba.reward_shaper import DEFAULT_REWARD_CONFIG, RewardConfig
 
 MOVEMENT_DELTA = {
@@ -65,6 +67,7 @@ class GameState:
         # Placeholders — initialized in reset
         self.terrain: np.ndarray = np.zeros((map_size, map_size), dtype=np.int8)
         self.heroes: dict[str, HeroState] = {}
+        self.structures: dict[str, StructureState] = {}
         self.step_count = 0
         self.red_kills = 0
         self.blue_kills = 0
@@ -91,6 +94,7 @@ class GameState:
         self.agents = self.possible_agents[:]
 
         self.terrain, spawns = generate_map(self.map_size, self.team_size, seed=self.rng.randint(0, 2**31))
+        self._initialize_structures()
 
         self.heroes = {}
         for agent_id in self.possible_agents:
@@ -104,6 +108,46 @@ class GameState:
             self.heroes[agent_id] = hero
 
         self.episode_rewards = dict.fromkeys(self.possible_agents, 0.0)
+
+    def _initialize_structures(self) -> None:
+        """Initialize runtime state for towers and bases from the terrain map."""
+        self.structures = {}
+        structure_specs = [
+            (RED_TOWER, "red", "tower", 1200.0),
+            (BLUE_TOWER, "blue", "tower", 1200.0),
+        ]
+        for terrain_code, team, structure_type, max_hp in structure_specs:
+            positions = np.argwhere(self.terrain == terrain_code)
+            for idx, (y, x) in enumerate(positions):
+                structure_id = f"{team}_{structure_type}_{idx}"
+                self.structures[structure_id] = StructureState(
+                    structure_id=structure_id,
+                    team=team,
+                    structure_type=structure_type,
+                    x=int(x),
+                    y=int(y),
+                    max_hp=max_hp,
+                    hp=max_hp,
+                )
+
+        for terrain_code, team in ((RED_BASE, "red"), (BLUE_BASE, "blue")):
+            positions = np.argwhere(self.terrain == terrain_code)
+            if positions.size == 0:
+                continue
+            y = int(round(float(positions[:, 0].mean())))
+            x = int(round(float(positions[:, 1].mean())))
+            structure_id = f"{team}_base_0"
+            self.structures[structure_id] = StructureState(
+                structure_id=structure_id,
+                team=team,
+                structure_type="base",
+                x=x,
+                y=y,
+                max_hp=2000.0,
+                hp=2000.0,
+            )
+
+        self._sync_structure_counts()
 
     def step(self, actions: dict[str, np.ndarray]) -> dict[str, float]:
         """Execute one game step with simultaneous actions.
@@ -238,6 +282,10 @@ class GameState:
                 step_rewards[agent_id] += self.reward_config.damage * actual
                 if target_hero.is_dead:
                     self._handle_kill(agent_id, target_hero, step_rewards)
+            else:
+                target_structure = self._get_nearby_enemy_structure(hero, hero.config.attack_range)
+                if target_structure is not None:
+                    self._damage_structure(agent_id, hero, target_structure, step_rewards)
 
         elif skill_choice == 1:
             skill = hero.config.skill_1
@@ -331,6 +379,10 @@ class GameState:
         exp_reward = 80.0 + 40.0 * (victim.level - 1)
         killer.gold += gold_reward
         killer.gain_exp(exp_reward)
+        if killer.team == "red":
+            self.red_gold += gold_reward
+        else:
+            self.blue_gold += gold_reward
 
         step_rewards[killer_id] += self.reward_config.kill
         step_rewards[victim.hero_id] += self.reward_config.death
@@ -349,6 +401,97 @@ class GameState:
             self.red_kills += 1
         else:
             self.blue_kills += 1
+
+    def _get_nearby_enemy_structure(
+        self,
+        hero: HeroState,
+        max_range: int,
+    ) -> StructureState | None:
+        candidates = []
+        for structure in self.structures.values():
+            if structure.team == hero.team or not structure.alive:
+                continue
+            if structure.structure_type == "base" and self._alive_tower_count(structure.team) > 0:
+                continue
+            dist = abs(hero.x - structure.x) + abs(hero.y - structure.y)
+            if dist <= max_range:
+                candidates.append((dist, structure))
+        candidates.sort(key=lambda item: item[0])
+        return candidates[0][1] if candidates else None
+
+    def _damage_structure(
+        self,
+        attacker_id: str,
+        attacker: HeroState,
+        structure: StructureState,
+        step_rewards: dict[str, float],
+    ) -> None:
+        was_alive = structure.alive
+        actual = structure.take_damage(attacker.config.attack_damage)
+        if actual <= 0:
+            return
+        attacker.damage_dealt += actual
+        step_rewards[attacker_id] += self.reward_config.damage * actual
+
+        if was_alive and not structure.alive:
+            self._handle_structure_destroy(attacker_id, attacker.team, structure, step_rewards)
+
+    def _handle_structure_destroy(
+        self,
+        attacker_id: str,
+        attacker_team: str,
+        structure: StructureState,
+        step_rewards: dict[str, float],
+    ) -> None:
+        if structure.structure_type == "tower":
+            step_rewards[attacker_id] += self.reward_config.tower
+            for agent_id, hero in self.heroes.items():
+                if hero.team == structure.team:
+                    step_rewards[agent_id] += self.reward_config.tower_lost
+            if attacker_team == "red":
+                self.red_gold += 300
+            else:
+                self.blue_gold += 300
+            self._sync_structure_counts()
+            return
+
+        if structure.structure_type == "base":
+            step_rewards[attacker_id] += getattr(self.reward_config, "base", 0.0)
+            self.game_winner = attacker_team
+
+    def _sync_structure_counts(self) -> None:
+        self.red_towers = self._alive_tower_count("red")
+        self.blue_towers = self._alive_tower_count("blue")
+
+    def _alive_tower_count(self, team: str) -> int:
+        return sum(
+            1
+            for structure in self.structures.values()
+            if structure.team == team and structure.structure_type == "tower" and structure.alive
+        )
+
+    def _structure_hp_sum(self, team: str, structure_type: str) -> float:
+        return float(
+            sum(
+                structure.hp
+                for structure in self.structures.values()
+                if structure.team == team and structure.structure_type == structure_type
+            )
+        )
+
+    def _objective_hp_sum(self, team: str) -> float:
+        return self._structure_hp_sum(team, "tower") + self._structure_hp_sum(team, "base")
+
+    def get_objective_info(self, team: str) -> dict[str, float]:
+        enemy = "blue" if team == "red" else "red"
+        return {
+            "team_gold": self.red_gold if team == "red" else self.blue_gold,
+            "enemy_gold": self.blue_gold if team == "red" else self.red_gold,
+            "ally_tower_hp": self._structure_hp_sum(team, "tower"),
+            "enemy_tower_hp": self._structure_hp_sum(enemy, "tower"),
+            "ally_base_hp": self._structure_hp_sum(team, "base"),
+            "enemy_base_hp": self._structure_hp_sum(enemy, "base"),
+        }
 
     def _get_nearby_enemies(self, hero: HeroState, max_range: int) -> list[HeroState]:
         """Return visible enemy heroes within range, sorted by distance."""
@@ -400,6 +543,11 @@ class GameState:
                 teammate_states[i] = self._build_teammate_vector(th)
 
         # Global info: (10,)
+        total_objective_hp = sum(s.max_hp for s in self.structures.values()) or 1.0
+        # Fixed global red-minus-blue perspective; agents can combine this with team id.
+        objective_advantage = (
+            self._objective_hp_sum("red") - self._objective_hp_sum("blue")
+        ) / total_objective_hp
         global_info = np.array(
             [
                 min(self.step_count / self.max_steps, 1.0),
@@ -411,7 +559,7 @@ class GameState:
                 hero.hp_ratio,
                 hero.mp_ratio,
                 hero.level / 15.0,
-                0.0,  # reserved
+                np.clip(objective_advantage, -1.0, 1.0),
             ],
             dtype=np.float32,
         )
@@ -433,7 +581,7 @@ class GameState:
             "self_state": np.zeros((20,), dtype=np.float32),
             "teammate_states": np.zeros((3, 15), dtype=np.float32),
             "global_info": np.zeros((10,), dtype=np.float32),
-            "action_mask": np.ones((324,), dtype=np.int8),
+            "action_mask": np.ones((N_ACTIONS,), dtype=np.int8),
         }
 
     def _build_local_map(self, hero: HeroState, radius: int) -> np.ndarray:
@@ -542,30 +690,29 @@ class GameState:
 
     def _build_action_mask(self, hero: HeroState) -> np.ndarray:
         """Build (324,) boolean mask. 1 = legal, 0 = illegal."""
-        mask = np.ones(324, dtype=np.int8)
+        mask = np.ones(N_ACTIONS, dtype=np.int8)
         if not hero.can_act():
             # Only "no move + no attack" is valid
             mask[:] = 0
-            mask[0 * 4 * 9 + 3 * 9 + 8] = 1  # move=0, skill=none, target=none
+            mask[encode_action(0, 3, 8)] = 1  # move=0, skill=none, target=none
             return mask
 
         # Movement: all 9 directions valid by default (walls handled in step)
         # Skill: if on cooldown or insufficient MP, mask out
         for move_dir in range(9):
-            base = move_dir * 36
             # Skill 0 (auto-attack): always valid
             # Skill 1: valid if not on cooldown and enough MP
             if hero.skill_1_cd > 0 or hero.mp < hero.config.skill_1.mp_cost:
                 for t in range(9):
-                    mask[base + 1 * 9 + t] = 0
+                    mask[encode_action(move_dir, 1, t)] = 0
             # Skill 2: valid if not on cooldown and enough MP
             if hero.skill_2_cd > 0 or hero.mp < hero.config.skill_2.mp_cost:
                 for t in range(9):
-                    mask[base + 2 * 9 + t] = 0
+                    mask[encode_action(move_dir, 2, t)] = 0
             # Skill 3 (no attack): always valid
             # But target selection only matters for skill 3's "no target" (target 8)
             for t in range(8):
-                mask[base + 3 * 9 + t] = 0  # only target 8 valid for "no attack"
+                mask[encode_action(move_dir, 3, t)] = 0  # only target 8 valid for "no attack"
 
         return mask
 
@@ -574,28 +721,19 @@ class GameState:
             return True
         if self.game_winner is not None:
             return True
-        # Game ends if both towers of one side are destroyed and base is attacked
-        if self.red_towers <= 0:
-            return True
-        if self.blue_towers <= 0:
-            return True
         return False
 
     def get_winner(self) -> str:
         if self.game_winner:
             return self.game_winner
-        if self.red_towers <= 0 and self.blue_towers <= 0:
-            # Both lost all towers — compare kills
-            if self.red_kills > self.blue_kills:
-                return "red"
-            elif self.blue_kills > self.red_kills:
-                return "blue"
-            return "draw"
-        if self.red_towers <= 0:
-            return "blue"
-        if self.blue_towers <= 0:
+        if self.red_towers > self.blue_towers:
             return "red"
-        # Max steps reached — compare kills
+        if self.blue_towers > self.red_towers:
+            return "blue"
+        if self.red_gold > self.blue_gold:
+            return "red"
+        if self.blue_gold > self.red_gold:
+            return "blue"
         if self.red_kills > self.blue_kills:
             return "red"
         elif self.blue_kills > self.red_kills:

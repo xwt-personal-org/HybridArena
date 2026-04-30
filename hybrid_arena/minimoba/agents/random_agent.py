@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from hybrid_arena.minimoba.action_encoding import decode_action
+
 
 class RandomAgent:
     """Agent that samples random valid actions."""
@@ -35,7 +37,5 @@ class RandomAgent:
             return np.array([0, 3, 8], dtype=np.int64)
 
         chosen = np.random.choice(valid_indices)
-        move = chosen // 36
-        skill = (chosen % 36) // 9
-        target = chosen % 9
+        move, skill, target = decode_action(int(chosen))
         return np.array([move, skill, target], dtype=np.int64)

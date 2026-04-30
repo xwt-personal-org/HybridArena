@@ -12,6 +12,7 @@ class RewardConfig:
     assist: float = 0.3
     tower: float = 2.0
     tower_lost: float = -2.0
+    base: float = 3.0
     farm: float = 0.1
     damage: float = 0.01
     heal: float = 0.01

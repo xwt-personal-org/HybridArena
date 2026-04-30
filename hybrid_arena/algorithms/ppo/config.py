@@ -47,9 +47,12 @@ class PPOConfig:
     # Seed
     seed: int = 42
 
-    # Self-play (planned)
+    # Self-play
     use_self_play: bool = False
     self_play_pool_size: int = 10
+
+    # Evaluation
+    eval_interval: int = 30_000
 
     # Device
     device: str = "cuda" if __import__("torch").cuda.is_available() else "cpu"
