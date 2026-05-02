@@ -177,10 +177,16 @@ python -m hybrid_arena.scripts.play_planner --planner rule --max-steps 50 --rend
 
 ## 实验结果表
 
+> **baseline_v1 partial** — ppo seed=42, 100k steps, 30 episodes, max_steps=500, CPU (~24 FPS)
+
 | algo | seed | opponent | win_rate | avg_reward | avg_len | fps |
 |---|---:|---|---:|---:|---:|---:|
-| ppo | 42 | random | 待正式实验 | 待正式实验 | 待正式实验 | 待正式实验 |
-| ppo_dualclip | 42 | rule_based | 待正式实验 | 待正式实验 | 待正式实验 | 待正式实验 |
+| ppo | 42 | random | 0.167 | 12.104 | 493.0 | 375.9 |
+| ppo | 42 | rule_based | 0.000 | 11.742 | 500.0 | 372.7 |
+
+**训练信号分析：** ppo 在 100k steps 后对 random 胜率仅 16.7%，对 rule_based 胜率为 0%，训练信号较弱。详见 `docs/experiment-report-v0.md`。
+
+> 下一步：优先跑 `ppo_dualclip seed=42` 同配置对照，验证 dual-clip 是否有改善。
 
 ## Known Limitations
 

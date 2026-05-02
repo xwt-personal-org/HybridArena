@@ -123,6 +123,22 @@
 - [x] Step F6.2：更新 `docs/issues.md`
 - [x] Step F6.3：更新 `CHANGELOG.md`
 
+### 模块 F7：正式 Baseline 实验
+
+- [x] Step F7.1：修改 `run_ablation.py` 支持训练+评估流程
+- [x] Step F7.2：运行 baseline_v1.yaml 正式实验（ppo seed=42, 100k steps）
+- [x] Step F7.3：生成 `results/baseline_v1/ablation_raw.csv` 与 `ablation_summary.md`
+- [x] Step F7.4：更新 README 实验结果表
+- [x] Step F7.5：运行 planner trace smoke 测试，确认 JSONL 可生成
+
+### 模块 F8：同步收口 baseline_v1 partial 结果
+
+- [x] Step F8.1：提交 `run_ablation.py` 的 train_eval / eval_only / baseline 模式改动
+- [x] Step F8.2：复制 `results/baseline_v1/` 结果到 `docs/experiment-report-v0.md`
+- [x] Step F8.3：更新 README 实验表标注为 `baseline_v1 partial: ppo seed=42 100k steps`
+- [x] Step F8.4：在 `docs/issues.md` 记录训练信号较弱（ISSUE-F9）
+- [x] Step F8.5：新增下一轮建议：优先跑 `ppo_dualclip seed=42` 同配置对照
+
 ## 已知问题
 
 当前已知问题均已纳入 `docs/plan.md`，Codex 执行时如遇到计划未覆盖的新问题，记录到 `docs/issues.md`。

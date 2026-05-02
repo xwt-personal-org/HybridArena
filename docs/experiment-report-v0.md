@@ -67,3 +67,37 @@ python -m hybrid_arena.scripts.run_ablation --config configs/experiments/baselin
 |---|---|---|---|
 | ppo | 42, 123, 456 | random, rule_based | win_rate, draw_rate, avg_reward, avg_len, avg_towers_destroyed, avg_tower_hp_advantage, fps |
 | ppo_dualclip | 42, 123, 456 | random, rule_based | win_rate, draw_rate, avg_reward, avg_len, avg_towers_destroyed, avg_tower_hp_advantage, fps |
+
+---
+
+## baseline_v1 Partial 结果
+
+> **状态：partial** — 仅完成 ppo seed=42（100k steps），其余算法和 seed 待后续补充。
+>
+> **训练环境：** CPU (约 24 FPS)，单 run 训练约 40 分钟。
+
+### 实验配置
+
+- 配置文件：`configs/experiments/baseline_v1.yaml`
+- 训练步数：100,000
+- 评估 episodes：30
+- max_steps：500
+
+### 结果
+
+| algo | seed | opponent | win_rate | draw_rate | avg_reward | avg_len | avg_towers_destroyed | avg_tower_hp_advantage | fps |
+|---|---:|---|---:|---:|---:|---:|---:|---:|---:|
+| ppo | 42 | random | 0.167 | 0.033 | 12.104 | 493.0 | 0.4 | -1187.0 | 375.9 |
+| ppo | 42 | rule_based | 0.000 | 0.067 | 11.742 | 500.0 | 0.4 | -663.0 | 372.7 |
+
+### 分析
+
+- **训练信号较弱**：ppo seed=42 在 100k steps 后对 random 胜率仅 16.7%，对 rule_based 胜率为 0%。
+- **可能原因**：
+  1. 100k steps 训练量不足，策略尚未收敛
+  2. 4v4 环境复杂度高，需要更多训练步数
+  3. RuleBasedAgent 作为 baseline 较强，ppo 需要更长训练才能超越
+- **下一步建议**：
+  1. 优先跑 `ppo_dualclip seed=42` 同配置对照，验证 dual-clip 是否有改善
+  2. 考虑增加训练步数至 300k-500k
+  3. 或使用 GPU 加速训练
