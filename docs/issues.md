@@ -52,3 +52,20 @@
   2. 考虑增加训练步数至 300k-500k
   3. 或使用 GPU 加速训练
 - 状态：已记录，待后续实验验证
+
+### ISSUE-F10：DualClipPPO 未改善训练信号
+- 严重级别：P2
+- 影响：ppo_dualclip seed=42 在 100k steps 后对 random 胜率 0%（ppo 为 16.7%），对 rule_based 胜率 0%，未展示优于 PPO 的改善
+- 数据：
+  - ppo_dualclip seed=42 vs random: win_rate=0.000, avg_reward=9.948, towers_destroyed=0.0
+  - ppo_dualclip seed=42 vs rule_based: win_rate=0.000, avg_reward=12.089, towers_destroyed=0.0
+- 对比 ppo：
+  - vs random: win_rate 0% vs 16.7%（更差），avg_reward 9.95 vs 12.10（更差）
+  - vs rule_based: win_rate 0% vs 0%（持平），avg_reward 12.09 vs 11.74（略好）
+- 分析：问题不在算法选择（dual-clip vs vanilla），而在训练信号本身。两种算法在 100k steps 后均未有效学习。
+- 结论：不继续完整矩阵（6 run），需要先诊断训练信号问题
+- 建议：
+  1. 增加训练步数至 300k-500k，观察是否收敛
+  2. 检查训练曲线（entropy、clip_fraction、value_loss）判断是否在学习
+  3. 简化环境（2v2、更小地图）验证算法正确性
+- 状态：已记录，作为训练信号诊断入口

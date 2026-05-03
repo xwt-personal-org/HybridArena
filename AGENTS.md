@@ -1,64 +1,41 @@
-# HybridArena — Project Workspace
+# AGENTS.md — 项目执行规范
 
-## Project Status
-Phase A (environment + baseline) ✅ | Phase B (5 DRL algorithms + Self-Play + training) ✅ | Phase C (LLM Planner) ✅ | Phase D (GRPO) ✅ | Phase E (Demo + README) ✅
+> 全局规范见 `~/.codex/AGENTS.md`，定义了自治迭代规则和 Web 模式契约。
+> 本文件只补充项目特定信息。
 
-All core components implemented and tested (63/64 tests pass, 1 skipped = pygame rendering).
-Short training validated: PPO reward rises, entropy drops, Self-Play pool updates correctly.
+## 项目信息
+- **项目名称**：HybridArena
+- **技术栈**：Python 3.10+ + PyTorch 2.x + PettingZoo + CleanRL + Qwen2.5 LLM
+- **目标硬件**：RTX 4060 Laptop (8GB VRAM)
+- **当前状态**：Phase A-E 完成，Phase F 进行中
 
-## Hardware Constraint
-- **Target hardware: RTX 4060 Laptop (8GB VRAM)**
-- Current dev machine: MX450 (2GB) — sufficient for env + DRL training, not for LLM inference
-- See `HybridArena_4060适配方案.md` for full hardware adaptation plan
+## 启动协议
 
-## Architecture
-```
-hybrid_arena/
-├── minimoba/          # PettingZoo 4v4 MOBA environment ✅
-│   ├── env.py         #   MiniMOBAEnv (ParallelEnv)
-│   ├── game_engine.py #   GameState (fog of war, combat, simultaneous actions)
-│   ├── hero.py        #   HeroConfig, HERO_POOL (tank/dps/support), HeroState
-│   ├── map_generator.py   #   Map generation (bases, towers, bushes, obstacles)
-│   ├── reward_shaper.py   #   RewardConfig + RewardTracker
-│   ├── renderer.py    #   Pygame 2D renderer
-│   ├── wrappers.py    #   SingleAgentWrapper (Gymnasium Env)
-│   ├── agents/        #   RandomAgent, RuleBasedAgent (FSM baseline)
-│   └── tests/         #   API compliance, env correctness, reward tests ✅
-├── algorithms/        # 5 DRL algorithms + Self-Play ✅
-│   ├── networks.py    #   MapEncoder, StateEncoder, ActorCritic (~1.2M params) ✅
-│   ├── ppo/           #   PPO + DualClipPPO (GAE, clipped value, dual-clip) ✅
-│   ├── mappo/         #   MAPPO (CTDE centralized critic) ✅
-│   ├── qmix/          #   QMIX (monotonic value decomposition) ✅
-│   ├── coma/          #   COMA (counterfactual baseline) ✅
-│   └── self_play/     #   SelfPlayManager + ELO + CurriculumScheduler ✅
-├── training/          # Trainer, buffer, evaluator, GRPO ✅
-│   ├── trainer.py     #   PPO/MAPPO training loop with Self-Play integration ✅
-│   ├── buffer.py      #   Rollout Buffer (GAE) with action_mask storage ✅
-│   ├── evaluator.py   #   Win-rate / KDA / ELO evaluation ✅
-│   ├── logger.py      #   W&B logging wrapper ✅
-│   └── grpo_trainer.py  # QLoRA GRPO for LLM planner ✅
-├── inference/         # LLM planner ✅
-│   ├── state_translator.py  # GameState -> natural language ✅
-│   ├── llm_planner.py       # Mock/API/Local LLM + state machine ✅
-│   └── strategy_bridge.py   # Strategy -> reward shaping + goals ✅
-├── demo/              # Streamlit demo skeleton ✅
-│   └── app.py
-├── configs/           # YAML configs
-│   └── default.yaml   #   Environment + training defaults
-└── scripts/           # play_human.py, benchmark_fps.py, train_smoke_test.py
-```
+每次新对话：
+1. 检查 `docs/inbox/` 有无新文件 → 有则 merge-back
+2. 读 `docs/progress.md` → 当前进度与阶段
+3. 读 `docs/issues.md` → 已知问题
+4. 判断任务来源（dispatch / 口头 / 无）→ 对应处理
+5. 简短报告状态
 
-## Tech Stack
-- Python 3.10+, PyTorch 2.x
-- RL: CleanRL fork + PettingZoo + SuperSuit
-- LLM: Qwen2.5-1.5B-Instruct (FP16, ~3GB) or 3B (4-bit, ~2.5GB)
-- LLM Agent: LangGraph + CrewAI + ReAct/Reflexion
-- LLM Training: TRL GRPO + QLoRA
-- Experiment tracking: W&B
+## 代码规范
+- 格式化：ruff (lint + format)
+- 缩进：4 空格
+- 命名：snake_case (Python)
+- Git 提交：Conventional Commits，中文描述
+- 测试框架：pytest
+- 测试位置：`hybrid_arena/*/tests/`
 
-## Key Commands
+## 项目特定规则
+- 所有文档使用中文（根目录 `.md` 文件）
+- Action space: MultiDiscrete([9, 4, 9]) = move × skill × target = 324
+- Observation: Dict with local_map (11,11,11), self_state (20,), teammate_states (3,15), global_info (10,), action_mask (324,)
+- Package installed with `pip install -e .` — import as `hybrid_arena`
+- Models saved to `models/`, logs to `runs/`, checkpoints to `checkpoints/`
 
-### Install
+## 关键命令
+
+### 安装
 ```bash
 pip install -e .            # base (env + agents)
 pip install -e ".[dev]"     # with test/lint tools
@@ -66,51 +43,49 @@ pip install -e ".[rl]"      # with PyTorch
 pip install -e ".[all]"     # everything
 ```
 
-### Test
+### 测试
 ```bash
-pytest hybrid_arena/minimoba/tests/ -v
+pytest hybrid_arena/ -v                         # 全部测试
+pytest hybrid_arena/minimoba/tests/ -v          # 环境测试
 pytest hybrid_arena/minimoba/tests/test_api.py -v       # PettingZoo API compliance
 pytest hybrid_arena/minimoba/tests/test_env.py -v       # Environment correctness
 pytest hybrid_arena/minimoba/tests/test_reward.py -v    # Reward function tests
 ```
 
-### Benchmark
-```bash
-python hybrid_arena/scripts/benchmark_fps.py            # Target: > 500 FPS
-```
-
-### Play
-```bash
-python hybrid_arena/scripts/play_human.py               # Keyboard-controlled demo
-```
-
-### Lint
+### 静态检查
 ```bash
 ruff check hybrid_arena/
 ruff format --check hybrid_arena/
 ```
 
-### DRL Training (to be implemented)
+### 基准测试
 ```bash
-python training/train.py --algorithm ppo_dualclip --seed 42
+python hybrid_arena/scripts/benchmark_fps.py            # Target: > 500 FPS
 ```
 
-### LLM GRPO Fine-tuning (to be implemented)
+### 训练
 ```bash
+python training/train.py --algorithm ppo_dualclip --seed 42
 python training/grpo_qlora_trainer.py --model Qwen2.5-1.5B-Instruct
 ```
 
-### Demo (to be implemented)
+### 演示
 ```bash
-streamlit run demo/app.py
+python hybrid_arena/scripts/play_human.py               # 键盘控制
+streamlit run demo/app.py                                # Web demo
 ```
 
-## Important Notes
-- All documentation is in **Chinese** (see root `.md` files)
-- `docs/HybridArena_完整项目实施方案.md` — full 4-stage implementation plan
-- `docs/HybridArena_4060适配方案.md` — RTX 4060-specific adaptations (model sizes, VRAM, training params)
-- `docs/招聘项目方案调研.md` — job-market analysis and project rationale
-- Action space: MultiDiscrete([9, 4, 9]) = move × skill × target = 324
-- Observation: Dict with local_map (11,11,11), self_state (20,), teammate_states (3,15), global_info (10,), action_mask (324,)
-- Package installed with `pip install -e .` — import as `hybrid_arena`
-- Models saved to `models/`, logs to `runs/`, checkpoints to `checkpoints/`
+## 禁止
+- 不直接修改 `game_engine.py` 的核心逻辑而不更新测试
+- 不引入未在 `pyproject.toml` 声明的外部依赖
+- 不在 MX450 (2GB) 上运行 LLM 推理（目标硬件为 RTX 4060）
+- 不提交 `models/`, `runs/`, `checkpoints/` 等生成目录
+
+## 重要文档
+- `docs/plan.md` — 活跃计划（含 scope 标签）
+- `docs/progress.md` — 步骤完成状态
+- `docs/issues.md` — 执行问题记录
+- `docs/architecture.md` — 架构文档
+- `docs/refs/` — 技术参考（实施方案、适配方案、调研）
+- `docs/experiment-report-v0.md` — 实验报告
+- `CHANGELOG.md` — 版本变更记录

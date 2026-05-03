@@ -72,9 +72,9 @@ python -m hybrid_arena.scripts.run_ablation --config configs/experiments/baselin
 
 ## baseline_v1 Partial 结果
 
-> **状态：partial** — 仅完成 ppo seed=42（100k steps），其余算法和 seed 待后续补充。
+> **状态：partial** — 仅完成 ppo seed=42 和 ppo_dualclip seed=42（各 100k steps），其余 seed 待后续补充。
 >
-> **训练环境：** CPU (约 24 FPS)，单 run 训练约 40 分钟。
+> **训练环境：** CPU (约 23-24 FPS)，单 run 训练约 40-72 分钟。
 
 ### 实验配置
 
@@ -82,6 +82,7 @@ python -m hybrid_arena.scripts.run_ablation --config configs/experiments/baselin
 - 训练步数：100,000
 - 评估 episodes：30
 - max_steps：500
+- 训练环境：map_size=32, team_size=4, num_envs=4
 
 ### 结果
 
@@ -89,15 +90,20 @@ python -m hybrid_arena.scripts.run_ablation --config configs/experiments/baselin
 |---|---:|---|---:|---:|---:|---:|---:|---:|---:|
 | ppo | 42 | random | 0.167 | 0.033 | 12.104 | 493.0 | 0.4 | -1187.0 | 375.9 |
 | ppo | 42 | rule_based | 0.000 | 0.067 | 11.742 | 500.0 | 0.4 | -663.0 | 372.7 |
+| ppo_dualclip | 42 | random | 0.000 | 0.033 | 9.948 | 498.6 | 0.0 | -2277.0 | 387.8 |
+| ppo_dualclip | 42 | rule_based | 0.000 | 0.000 | 12.089 | 500.0 | 0.0 | -1985.0 | 387.9 |
 
 ### 分析
 
-- **训练信号较弱**：ppo seed=42 在 100k steps 后对 random 胜率仅 16.7%，对 rule_based 胜率为 0%。
-- **可能原因**：
-  1. 100k steps 训练量不足，策略尚未收敛
-  2. 4v4 环境复杂度高，需要更多训练步数
-  3. RuleBasedAgent 作为 baseline 较强，ppo 需要更长训练才能超越
+- **DualClipPPO 未改善训练信号**：ppo_dualclip seed=42 在 100k steps 后对 random 胜率 0%（ppo 为 16.7%），对 rule_based 胜率仍为 0%。
+- **DualClipPPO 表现更差**：对 random 的 avg_reward（9.95）低于 ppo（12.10），avg_towers_destroyed 为 0（ppo 为 0.4）。
+- **训练信号诊断入口**：两种算法在 100k steps 后均未展示有效学习，问题可能不在算法选择，而在：
+  1. 100k steps 训练量严重不足（4v4 环境复杂度高）
+  2. 奖励信号稀疏或梯度不稳定
+  3. 环境/观测/动作编码可能存在未发现的 bug
+- **结论**：不继续完整矩阵（6 run），需要先诊断训练信号问题。
 - **下一步建议**：
-  1. 优先跑 `ppo_dualclip seed=42` 同配置对照，验证 dual-clip 是否有改善
-  2. 考虑增加训练步数至 300k-500k
-  3. 或使用 GPU 加速训练
+  1. 增加训练步数至 300k-500k，观察是否收敛
+  2. 检查训练曲线（entropy、clip_fraction、value_loss）判断是否在学习
+  3. 简化环境（2v2、更小地图）验证算法正确性
+  4. 或使用 GPU 加速训练以获得更长训练量

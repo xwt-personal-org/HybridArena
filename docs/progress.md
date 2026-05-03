@@ -3,8 +3,8 @@
 ## 当前状态
 
 - 当前阶段：Phase F（验证、纠偏与正式实验准备）
-- 最后更新：2026-04-30
-- 状态：模块 0-7 已完成，Phase F 进行中
+- 最后更新：2026-05-03
+- 状态：模块 0-7 已完成，Phase F 进行中（F9 DualClipPPO 对照完成）
 
 ## 模块进度
 
@@ -138,6 +138,15 @@
 - [x] Step F8.3：更新 README 实验表标注为 `baseline_v1 partial: ppo seed=42 100k steps`
 - [x] Step F8.4：在 `docs/issues.md` 记录训练信号较弱（ISSUE-F9）
 - [x] Step F8.5：新增下一轮建议：优先跑 `ppo_dualclip seed=42` 同配置对照
+
+### 模块 F9：DualClipPPO 对照实验
+
+- [x] Step F9.1：训练 ppo_dualclip seed=42（100k steps，CPU ~72 分钟）
+- [x] Step F9.2：评估 ppo_dualclip seed=42 vs random（30 episodes）→ win_rate=0.0%
+- [x] Step F9.3：评估 ppo_dualclip seed=42 vs rule_based（30 episodes）→ win_rate=0.0%
+- [x] Step F9.4：更新 baseline_v1 partial 结果表
+- [x] Step F9.5：更新 experiment-report-v0.md、README.md、progress.md
+- [x] Step F9.6：DualClipPPO 未改善（对 random 0% vs ppo 16.7%），记录为训练信号诊断入口，不继续完整矩阵
 
 ## 已知问题
 
