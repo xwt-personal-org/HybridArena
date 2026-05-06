@@ -111,3 +111,25 @@
 - **eval_only 重跑结果**（修正后）：
   - ppo seed=42 vs random: win_rate=0.267, draw_rate=0.333, avg_reward=12.953, avg_len=200.0
   - 对比修正前: win_rate=0.333→0.267, avg_reward=6.183→12.953（red team 口径更准确）
+
+#### 重训验证（2026-05-06）
+- **重训配置**：ppo seed=42, 100k steps, 2v2, map_size=16, max_steps=200
+- **重训结果**：
+  - win_rate=0.467, draw_rate=0.367, avg_reward=22.351, avg_len=200.0
+  - towers_destroyed=0.8, tower_hp_advantage=567.0, fps=402.5
+- **对比修复前 eval_only**：
+  - win_rate: 0.267 → 0.467（+75%）
+  - avg_reward: 12.953 → 22.351（+73%）
+  - towers_destroyed: 0.333 → 0.8（+140%）
+  - tower_hp_advantage: 65 → 567（+772%）
+- **训练信号分析**：
+  - 训练曲线 entropy 从 ~4.5 降至 ~3.75（policy 在变确定性）
+  - 训练曲线 episode_length 从 ~200 降至 ~27（学会了交战）
+  - 最终训练 reward ~6.65，episode_length ~28
+- **结论**：
+  - ✅ evaluator 修复有效：win_rate 和 avg_reward 显著提升
+  - ✅ 训练信号改善：towers_destroyed 和 tower_hp_advantage 大幅提升
+  - ❌ win_rate 未达 50% 阈值（46.7% < 50%）
+  - ❌ avg_len 仍为 200：策略未学会终结游戏，靠 timeout 判胜
+  - **根因**：策略需要学会推基地终结游戏，当前靠 towers/kills 优势在 timeout 时判胜
+- **状态**：已验证修复有效，但需 objective/reward shaping 解决终结问题

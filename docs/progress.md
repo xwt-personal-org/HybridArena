@@ -3,8 +3,8 @@
 ## 当前状态
 
 - 当前阶段：Phase F（验证、纠偏与正式实验准备）
-- 最后更新：2026-05-03
-- 状态：模块 0-7 已完成，Phase F 进行中（F9 DualClipPPO 对照完成）
+- 最后更新：2026-05-06
+- 状态：模块 0-7 已完成，Phase F 进行中（F11 ISSUE-F11 修复与重训验证完成）
 
 ## 模块进度
 
@@ -158,6 +158,16 @@
 - [x] Step F10.6：对比 4v4 baseline，确认环境复杂度是因素之一
 - [x] Step F10.7：诊断 evaluator 跨两队平均问题 + draw_rate timeout 问题
 - [x] Step F10.8：记录 ISSUE-F11，更新 experiment-report-v0.md、issues.md、report.md
+
+### 模块 F11：ISSUE-F11 修复与重训验证
+
+- [x] Step F11.1：修复 evaluator.py（avg_reward 只统计 red team，新增 avg_red/blue/margin）
+- [x] Step F11.2：修复 env.py（draw 时不发放 win/lose reward）
+- [x] Step F11.3：新增 evaluator 单测 + env 终局 reward 单测（34 tests passed）
+- [x] Step F11.4：排查 ep_len 不一致根因（多环境统计 vs 单环境评估）
+- [x] Step F11.5：重跑 eval_only 验证：win_rate=0.267（修正后口径）
+- [x] Step F11.6：重跑 train+eval 验证：win_rate=0.467（修复后重训 100k steps）
+- [x] Step F11.7：更新 docs（issues.md、report.md、progress.md）
 
 ## 已知问题
 
