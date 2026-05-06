@@ -161,6 +161,7 @@ class MiniMOBAEnv(ParallelEnv):
     def close(self):
         try:
             import pygame
+
             pygame.quit()
         except ImportError:
             pass

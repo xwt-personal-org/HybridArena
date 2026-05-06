@@ -189,7 +189,9 @@ def test_timeout_advantage_does_not_grant_win_lose_reward():
             break
 
     # Verify terminal_reason is timeout
-    assert gs.terminal_reason == "timeout", f"Expected terminal_reason='timeout', got '{gs.terminal_reason}'"
+    assert gs.terminal_reason == "timeout", (
+        f"Expected terminal_reason='timeout', got '{gs.terminal_reason}'"
+    )
     # Verify get_winner returns "red" (adjudicated win)
     assert gs.get_winner() == "red", f"Expected winner='red', got '{gs.get_winner()}'"
 
@@ -223,6 +225,10 @@ def test_base_destroyed_grants_win_lose_reward():
     # Win/lose reward should be given
     for agent in gs.possible_agents:
         if agent.startswith("red"):
-            assert rewards[agent] > 0, f"Red agent {agent} should get positive reward on base destroy"
+            assert rewards[agent] > 0, (
+                f"Red agent {agent} should get positive reward on base destroy"
+            )
         else:
-            assert rewards[agent] < 0, f"Blue agent {agent} should get negative reward on base destroy"
+            assert rewards[agent] < 0, (
+                f"Blue agent {agent} should get negative reward on base destroy"
+            )

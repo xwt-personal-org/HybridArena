@@ -149,4 +149,23 @@
   2. env.py 仅在 terminal_reason == "base_destroyed" 时发 win/lose terminal reward
   3. evaluator.py 新增 hard_win_rate、timeout_win_rate、timeout_draw_rate
   4. 补测试覆盖 timeout advantage 场景
-- 状态：已修复（2026-05-06），待重训验证 hard_win_rate vs timeout_win_rate 分布
+- 状态：已修复（2026-05-06），重训验证完成
+
+#### 重训验证（2026-05-06）
+- **配置**：ppo seed=42, 100k steps, 2v2, map_size=16, max_steps=200
+- **结果**：
+  - win_rate=0.400, draw_rate=0.333, avg_reward=13.705, avg_len=200.0
+  - **hard_win_rate=0.000**（无 base_destroyed 胜利）
+  - timeout_win_rate=0.400（所有胜利均为 timeout 判胜）
+  - timeout_draw_rate=0.333
+- **对比旧 semantics**：
+  - 旧：win_rate=0.467（含 timeout win reward），avg_reward=22.351
+  - 新：win_rate=0.400（不含 timeout win reward），avg_reward=13.705
+- **结论**：
+  - ✅ terminal semantics 拆分有效：timeout 不再发 win/lose reward
+  - ❌ hard_win_rate = 0.0%：策略完全靠 timeout 判胜，未学会推基地
+  - ❌ 需 objective reward shaping 引导策略学会终结游戏
+- **下一步**：
+  1. 需要 objective reward shaping（推基地奖励）引导策略学会终结
+  2. 不建议调 reward 权重或上 300k-500k 长训
+  3. 优先解决 hard_win_rate=0 的结构性问题

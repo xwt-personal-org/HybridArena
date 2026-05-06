@@ -4,7 +4,7 @@
 
 - 当前阶段：Phase F（验证、纠偏与正式实验准备）
 - 最后更新：2026-05-06
-- 状态：模块 0-7 已完成，Phase F 进行中（F11 ISSUE-F11 修复与重训验证完成）
+- 状态：模块 0-7 已完成，Phase F 进行中（F12 terminal semantics 修复与重训完成）
 
 ## 模块进度
 
@@ -168,6 +168,16 @@
 - [x] Step F11.5：重跑 eval_only 验证：win_rate=0.267（修正后口径）
 - [x] Step F11.6：重跑 train+eval 验证：win_rate=0.467（修复后重训 100k steps）
 - [x] Step F11.7：更新 docs（issues.md、report.md、progress.md）
+
+### 模块 F12：ISSUE-F12 terminal semantics 修复与重训
+
+- [x] Step F12.1：game_engine.py 新增 terminal_reason 字段（"base_destroyed"/"timeout"/None）
+- [x] Step F12.2：env.py 仅在 terminal_reason == "base_destroyed" 时发 win/lose terminal reward
+- [x] Step F12.3：evaluator.py 新增 hard_win_rate/timeout_win_rate/timeout_draw_rate 指标
+- [x] Step F12.4：run_ablation.py CSV/summary 导出新指标列
+- [x] Step F12.5：补测试（4 个新增，18 tests passed，ruff clean）
+- [x] Step F12.6：重训 sanity_2v2（100k steps，1992s）
+- [x] Step F12.7：评估 vs random → hard_win_rate=0.000, timeout_win_rate=0.400
 
 ## 已知问题
 

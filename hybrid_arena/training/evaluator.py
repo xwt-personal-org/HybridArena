@@ -101,7 +101,9 @@ def evaluate_policy(
 
         if env.is_game_over:
             winner = env.game_state.get_winner() if env.game_state else None
-            terminal_reason = getattr(env.game_state, "terminal_reason", None) if env.game_state else None
+            terminal_reason = (
+                getattr(env.game_state, "terminal_reason", None) if env.game_state else None
+            )
             if winner == "red":
                 red_wins += 1
                 if terminal_reason == "base_destroyed":
@@ -164,7 +166,9 @@ def evaluate_policy(
         "avg_kills": float(total_kills["red"] / max(n_episodes, 1)),
         "avg_deaths": float(total_deaths["red"] / max(n_episodes, 1)),
         "avg_towers_destroyed": float(np.mean(towers_destroyed)) if towers_destroyed else 0.0,
-        "avg_tower_hp_advantage": float(np.mean(tower_hp_advantages)) if tower_hp_advantages else 0.0,
+        "avg_tower_hp_advantage": float(np.mean(tower_hp_advantages))
+        if tower_hp_advantages
+        else 0.0,
         "fps": total_steps / max(elapsed, 1e-6),
         "total_kills_red": total_kills["red"],
         "total_kills_blue": total_kills["blue"],

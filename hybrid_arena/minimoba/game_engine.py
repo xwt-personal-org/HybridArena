@@ -95,7 +95,9 @@ class GameState:
         self.terminal_reason = None
         self.agents = self.possible_agents[:]
 
-        self.terrain, spawns = generate_map(self.map_size, self.team_size, seed=self.rng.randint(0, 2**31))
+        self.terrain, spawns = generate_map(
+            self.map_size, self.team_size, seed=self.rng.randint(0, 2**31)
+        )
         self._initialize_structures()
 
         self.heroes = {}
@@ -248,7 +250,11 @@ class GameState:
         return int(action[0]) % 9, int(action[1]) % 4, int(action[2]) % 9
 
     def _execute_attack(
-        self, agent_id: str, hero: HeroState, skill_choice: int, target_choice: int,
+        self,
+        agent_id: str,
+        hero: HeroState,
+        skill_choice: int,
+        target_choice: int,
         step_rewards: dict[str, float],
     ):
         """Execute an attack or skill."""
@@ -277,7 +283,10 @@ class GameState:
         if skill_choice == 0:
             if target_hero and target_hero.alive:
                 raw_dmg = hero.config.attack_damage
-                if hero.config.passive.passive_type == "crit_chance" and self.rng.random() < hero.config.passive.value:
+                if (
+                    hero.config.passive.passive_type == "crit_chance"
+                    and self.rng.random() < hero.config.passive.value
+                ):
                     raw_dmg *= 2.0
                 actual = target_hero.take_damage(raw_dmg)
                 hero.damage_dealt += actual
@@ -302,7 +311,11 @@ class GameState:
             self._apply_skill(agent_id, hero, skill, target_hero, step_rewards)
 
     def _apply_skill(
-        self, agent_id: str, caster: HeroState, skill, target: HeroState | None,
+        self,
+        agent_id: str,
+        caster: HeroState,
+        skill,
+        target: HeroState | None,
         step_rewards: dict[str, float],
     ):
         """Apply a skill's effects."""
@@ -372,7 +385,10 @@ class GameState:
                 self._handle_kill(agent_id, tgt, step_rewards)
 
     def _handle_kill(
-        self, killer_id: str, victim: HeroState, step_rewards: dict[str, float],
+        self,
+        killer_id: str,
+        victim: HeroState,
+        step_rewards: dict[str, float],
     ):
         victim.deaths += 1
         killer = self.heroes[killer_id]

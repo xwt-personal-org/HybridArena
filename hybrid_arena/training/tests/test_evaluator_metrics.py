@@ -31,7 +31,9 @@ def test_win_rate_denominator_excludes_draws_or_documents_draws():
     policy = RuleBasedAgent().act
     opponent = RandomAgent().act
     result = evaluate_policy(
-        policy, opponent_fn=opponent, n_episodes=5,
+        policy,
+        opponent_fn=opponent,
+        n_episodes=5,
         env_kwargs={"map_size": 16, "team_size": 2, "max_steps": 30},
         seed_offset=42,
     )
@@ -48,7 +50,9 @@ def test_objective_metrics_present_in_eval_result():
     policy = RuleBasedAgent().act
     opponent = RandomAgent().act
     result = evaluate_policy(
-        policy, opponent_fn=opponent, n_episodes=3,
+        policy,
+        opponent_fn=opponent,
+        n_episodes=3,
         env_kwargs={"map_size": 16, "team_size": 2, "max_steps": 30},
         seed_offset=42,
     )
@@ -62,7 +66,9 @@ def test_eval_result_serialization_contains_required_fields():
     policy = RuleBasedAgent().act
     opponent = RandomAgent().act
     result = evaluate_policy(
-        policy, opponent_fn=opponent, n_episodes=3,
+        policy,
+        opponent_fn=opponent,
+        n_episodes=3,
         env_kwargs={"map_size": 16, "team_size": 2, "max_steps": 30},
         seed_offset=42,
     )
@@ -77,7 +83,9 @@ def test_avg_reward_equals_red_reward():
     policy = RuleBasedAgent().act
     opponent = RandomAgent().act
     result = evaluate_policy(
-        policy, opponent_fn=opponent, n_episodes=5,
+        policy,
+        opponent_fn=opponent,
+        n_episodes=5,
         env_kwargs={"map_size": 16, "team_size": 2, "max_steps": 30},
         seed_offset=42,
     )
@@ -91,7 +99,9 @@ def test_reward_margin_is_red_minus_blue():
     policy = RuleBasedAgent().act
     opponent = RandomAgent().act
     result = evaluate_policy(
-        policy, opponent_fn=opponent, n_episodes=5,
+        policy,
+        opponent_fn=opponent,
+        n_episodes=5,
         env_kwargs={"map_size": 16, "team_size": 2, "max_steps": 30},
         seed_offset=42,
     )
@@ -108,18 +118,22 @@ def test_red_blue_rewards_not_cross_averaged():
     policy = RuleBasedAgent().act
     opponent = RandomAgent().act
     result = evaluate_policy(
-        policy, opponent_fn=opponent, n_episodes=10,
+        policy,
+        opponent_fn=opponent,
+        n_episodes=10,
         env_kwargs={"map_size": 16, "team_size": 2, "max_steps": 100},
         seed_offset=42,
     )
     # If there are wins, red and blue rewards should differ
     if result["red_wins"] > 0 or result["blue_wins"] > 0:
         # Red reward should not equal blue reward when there are wins
-        assert result["avg_red_reward"] != result["avg_blue_reward"], \
+        assert result["avg_red_reward"] != result["avg_blue_reward"], (
             "Red and blue rewards should differ when there are wins"
+        )
         # Margin should be non-zero
-        assert result["avg_reward_margin"] != 0.0, \
+        assert result["avg_reward_margin"] != 0.0, (
             "Reward margin should be non-zero when there are wins"
+        )
 
 
 def test_evaluator_splits_hard_win_and_timeout_win():
@@ -127,7 +141,9 @@ def test_evaluator_splits_hard_win_and_timeout_win():
     policy = RuleBasedAgent().act
     opponent = RandomAgent().act
     result = evaluate_policy(
-        policy, opponent_fn=opponent, n_episodes=10,
+        policy,
+        opponent_fn=opponent,
+        n_episodes=10,
         env_kwargs={"map_size": 16, "team_size": 2, "max_steps": 100},
         seed_offset=42,
     )
@@ -143,7 +159,9 @@ def test_evaluator_splits_hard_win_and_timeout_win():
     assert result["hard_blue_wins"] + result["timeout_blue_wins"] == result["blue_wins"]
 
     # hard_win_rate + timeout_win_rate + timeout_draw_rate + other_draws should be <= 1
-    total_accounted = result["hard_win_rate"] + result["timeout_win_rate"] + result["timeout_draw_rate"]
+    total_accounted = (
+        result["hard_win_rate"] + result["timeout_win_rate"] + result["timeout_draw_rate"]
+    )
     assert total_accounted <= 1.0 + 1e-9
 
 
@@ -152,7 +170,9 @@ def test_hard_win_rate_is_base_destroyed_only():
     policy = RuleBasedAgent().act
     opponent = RandomAgent().act
     result = evaluate_policy(
-        policy, opponent_fn=opponent, n_episodes=10,
+        policy,
+        opponent_fn=opponent,
+        n_episodes=10,
         env_kwargs={"map_size": 16, "team_size": 2, "max_steps": 100},
         seed_offset=42,
     )

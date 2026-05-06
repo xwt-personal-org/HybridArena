@@ -27,16 +27,27 @@ from hybrid_arena.training.trainer import Trainer
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run HybridArena ablation matrix")
     parser.add_argument("--config", type=str, default=None, help="Path to YAML config file")
-    parser.add_argument("--dry-run", action="store_true", help="Print planned matrix without running")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print planned matrix without running"
+    )
     parser.add_argument("--episodes", type=int, default=1)
     parser.add_argument("--max-steps", type=int, default=50)
     parser.add_argument("--map-size", type=int, default=16)
     parser.add_argument("--team-size", type=int, default=2)
     parser.add_argument("--output-dir", type=str, default="results")
-    parser.add_argument("--mode", type=str, default="auto", choices=["auto", "baseline", "train_eval", "eval_only"],
-                        help="Execution mode: baseline (no training), train_eval (train then eval), eval_only (eval existing checkpoints), auto (detect from config)")
-    parser.add_argument("--train-timesteps", type=int, default=None,
-                        help="Override training timesteps (default: from config)")
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default="auto",
+        choices=["auto", "baseline", "train_eval", "eval_only"],
+        help="Execution mode: baseline (no training), train_eval (train then eval), eval_only (eval existing checkpoints), auto (detect from config)",
+    )
+    parser.add_argument(
+        "--train-timesteps",
+        type=int,
+        default=None,
+        help="Override training timesteps (default: from config)",
+    )
     return parser.parse_args()
 
 
@@ -70,7 +81,8 @@ def _load_policy_from_checkpoint(checkpoint_path: str, device: str = "cpu"):
     def policy_fn(obs: dict, agent_id: str) -> np.ndarray:
         obs_t = {
             k: torch.tensor(v, dtype=torch.float32, device=device).unsqueeze(0)
-            for k, v in obs.items() if k != "action_mask"
+            for k, v in obs.items()
+            if k != "action_mask"
         }
         obs_t["action_mask"] = torch.tensor(
             obs["action_mask"], dtype=torch.int8, device=device
@@ -106,11 +118,11 @@ def _train_model(algo: str, seed: int, total_timesteps: int, config: dict) -> st
     torch.manual_seed(seed)
 
     # Train
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Training {algo} (seed={seed})")
     print(f"  Timesteps: {total_timesteps:,}")
     print(f"  Device: {ppo_config.device}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     trainer = Trainer(
         config=ppo_config,
@@ -133,16 +145,15 @@ def _train_model(algo: str, seed: int, total_timesteps: int, config: dict) -> st
 
 def _write_summary(path: Path, rows: list[dict]) -> None:
     header = (
-        "| algo | seed | opponent | win_rate | draw_rate | avg_reward | avg_len | "
-        "avg_towers_destroyed | avg_tower_hp_advantage | fps |"
+        "| algo | seed | opponent | win_rate | draw_rate | hard_win | timeout_win | timeout_draw | "
+        "avg_reward | avg_len | towers_destroyed | tower_hp_adv | fps |"
     )
-    sep = (
-        "|---|---:|---|---:|---:|---:|---:|---:|---:|"
-    )
+    sep = "|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"
     lines = [header, sep]
     for row in rows:
         lines.append(
             "| {algo} | {seed} | {opponent} | {win_rate:.3f} | {draw_rate:.3f} | "
+            "{hard_win_rate:.3f} | {timeout_win_rate:.3f} | {timeout_draw_rate:.3f} | "
             "{avg_reward:.3f} | {avg_len:.1f} | {avg_towers_destroyed:.1f} | "
             "{avg_tower_hp_advantage:.1f} | {fps:.1f} |".format(**row)
         )
@@ -188,7 +199,11 @@ def main() -> None:
         mode = "train_eval" if train_timesteps and train_timesteps > 0 else "baseline"
 
     # Get checkpoint directory
-    checkpoint_dir = Path(cfg.get("outputs", {}).get("checkpoint_dir", "checkpoints")) if cfg else Path("checkpoints")
+    checkpoint_dir = (
+        Path(cfg.get("outputs", {}).get("checkpoint_dir", "checkpoints"))
+        if cfg
+        else Path("checkpoints")
+    )
 
     if args.dry_run:
         print(f"[dry-run] Mode: {mode}")
@@ -196,8 +211,10 @@ def main() -> None:
         for algo in algorithms:
             for seed in seeds:
                 for opponent in opponents:
-                    print(f"  algo={algo}  seed={seed}  opponent={opponent}  "
-                          f"episodes={episodes}  max_steps={max_steps}")
+                    print(
+                        f"  algo={algo}  seed={seed}  opponent={opponent}  "
+                        f"episodes={episodes}  max_steps={max_steps}"
+                    )
         print(f"[dry-run] Output dir: {output_dir}")
         print(f"[dry-run] Total runs: {len(algorithms) * len(seeds) * len(opponents)}")
         if mode == "train_eval":
@@ -251,6 +268,9 @@ def main() -> None:
                         "opponent": opponent,
                         "win_rate": result["win_rate"],
                         "draw_rate": result["draw_rate"],
+                        "hard_win_rate": result.get("hard_win_rate", 0.0),
+                        "timeout_win_rate": result.get("timeout_win_rate", 0.0),
+                        "timeout_draw_rate": result.get("timeout_draw_rate", 0.0),
                         "avg_reward": result["avg_reward"],
                         "avg_len": result["avg_episode_length"],
                         "avg_towers_destroyed": result["avg_towers_destroyed"],
@@ -264,9 +284,19 @@ def main() -> None:
         writer = csv.DictWriter(
             f,
             fieldnames=[
-                "algo", "seed", "opponent", "win_rate", "draw_rate",
-                "avg_reward", "avg_len", "avg_towers_destroyed",
-                "avg_tower_hp_advantage", "fps",
+                "algo",
+                "seed",
+                "opponent",
+                "win_rate",
+                "draw_rate",
+                "hard_win_rate",
+                "timeout_win_rate",
+                "timeout_draw_rate",
+                "avg_reward",
+                "avg_len",
+                "avg_towers_destroyed",
+                "avg_tower_hp_advantage",
+                "fps",
             ],
         )
         writer.writeheader()
