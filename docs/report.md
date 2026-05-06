@@ -2,45 +2,56 @@
 
 ## STATUS: ALL_CLEAR
 
-> 上次更新：2026-05-06 | plan.md 版本：v1
+> 上次更新：2026-05-06 | plan.md 版本：v2
 
 ## Last Execution
-- 来源：口头指令（ISSUE-F12 重训验证）
-- 摘要：重训 sanity_2v2 验证 terminal semantics 修复效果。hard_win_rate=0.000，所有胜利均为 timeout 判胜，策略未学会推基地终结。
+- 来源：dispatch:patch（Phase F13 objective reward shaping）
+- 摘要：实现 objective reward shaping（tower/base damage team reward + base exposed one-time reward），重训 sanity_2v2 100k steps。tower_damage 从 ~0 跃升到 1351，但 hard_win_rate=0、base_exposed_rate=0，策略未学会推完塔再推基地。
 
 ## Completed
-- [x] H-1: `game_engine.py` 增加 `terminal_reason` 字段（"base_destroyed"/"timeout"/None）
-- [x] H-1: `env.py` 仅在 `terminal_reason == "base_destroyed"` 时发 win/lose terminal reward
-- [x] M-1: `evaluator.py` 新增 `hard_win_rate`、`timeout_win_rate`、`timeout_draw_rate` 指标
-- [x] M-1: `run_ablation.py` CSV/summary 导出新指标列
-- [x] M-3: 补测试（18 tests passed，ruff clean）
-- [x] 重训 sanity_2v2（100k steps，1992s）→ hard_win_rate=0.000, timeout_win_rate=0.400
+- [x] F13.1: `RewardConfig` 新增 objective shaping 字段（objective_enabled/tower_damage_team/base_damage_team/base_exposed_team/step_cap_team）
+- [x] F13.2: `_add_team_reward` helper（game_engine.py）
+- [x] F13.3: 结构物伤害路径加入 objective progress reward
+- [x] F13.4: base exposed 一次性 team reward
+- [x] F13.5: objective 诊断字段（red/blue_tower/base_damage, base_exposed_rewarded）
+- [x] F13.6: evaluator 新增 avg_tower_damage/avg_base_damage/avg_enemy_base_hp_remaining/base_exposed_rate
+- [x] F13.7: run_ablation 透传 reward config（PPOConfig + Trainer + evaluate_policy）
+- [x] F13.8: `sanity_2v2_objective_shaping.yaml`
+- [x] F13.9: 100k 重训（2039s）+ 138 tests passed + ruff clean
 
 ## In Review
 （无）
 
 ## Blocked
-- [ ] hard_win_rate=0.0% — 策略完全靠 timeout 判胜，需 objective reward shaping
-- [ ] sanity_2v2 未达 50% 阈值 — 需解决 hard_win_rate=0 后重训
+- [ ] hard_win_rate=0.0% — objective shaping 引导了 tower_damage 但未引导 base destruction
+- [ ] base_exposed_rate=0.0% — 策略没学会推完塔
+- [ ] sanity_2v2 未达 50% 阈值
 - [ ] 300k-500k 长训 — 需 sanity_2v2 达到 50% 后再上
 
 ## Discovered Issues
-- ISSUE-F12: terminal semantics split — 已修复并重训验证
-- **关键发现**：hard_win_rate=0.000，策略未学会推基地终结，所有胜利来自 timeout adjudication
+- ISSUE-F13: objective reward shaping — tower_damage 提升但 base_exposed_rate=0
+- tower_damage=1351（显著提升），但 avg_towers_destroyed=0.267（下降）
+- 策略在磨塔但没学会终结
 
 ## Recommendations
-- 需 objective reward shaping 引导策略学会推基地终结
-- 不建议调 reward 权重或上 300k-500k 长训
-- 优先解决 hard_win_rate=0 的结构性问题
+- 考虑 macro-action curriculum / path-to-objective shaping
+- 或增加 tower_destroyed bonus 引导策略完成推塔
+- 或调整 shaping 参数（增大 objective_base_exposed_team）
+- 不建议上 300k-500k 长训
 
 ## 实验结果
 
-### sanity_2v2（新 terminal semantics，重训 100k steps）
-| algo | seed | opponent | win_rate | draw_rate | hard_win | timeout_win | timeout_draw | avg_reward | avg_len | towers_destroyed | tower_hp_adv | fps |
+### sanity_2v2 objective shaping（100k steps）
+| algo | seed | opponent | win_rate | draw_rate | hard_win | timeout_win | timeout_draw | avg_reward | avg_len | towers | tower_hp | tower_dmg | base_dmg | enemy_base_hp | base_exp | fps |
+|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| ppo | 42 | random | 0.200 | 0.333 | 0.000 | 0.200 | 0.333 | 14.562 | 200.0 | 0.3 | -21.0 | 1351.0 | 0.0 | 2000.0 | 0.000 | 403.7 |
+
+### sanity_2v2 无 shaping（100k steps，新 terminal semantics）
+| algo | seed | opponent | win_rate | draw_rate | hard_win | timeout_win | timeout_draw | avg_reward | avg_len | towers | tower_hp | fps |
 |---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | ppo | 42 | random | 0.400 | 0.333 | 0.000 | 0.400 | 0.333 | 13.705 | 200.0 | 0.6 | -185.0 | 412.2 |
 
-### sanity_2v2（旧 terminal semantics，重训 100k steps）
+### sanity_2v2 旧 terminal semantics（100k steps）
 | algo | seed | opponent | win_rate | draw_rate | avg_reward | avg_len | towers_destroyed | tower_hp_adv | fps |
 |---|---:|---|---:|---:|---:|---:|---:|---:|---:|
 | ppo | 42 | random | 0.467 | 0.367 | 22.351 | 200.0 | 0.8 | 567.0 | 402.5 |

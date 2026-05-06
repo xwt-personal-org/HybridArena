@@ -20,8 +20,17 @@ from hybrid_arena.algorithms.networks import ActorCritic
 from hybrid_arena.algorithms.ppo.config import PPOConfig
 from hybrid_arena.minimoba.agents.random_agent import RandomAgent
 from hybrid_arena.minimoba.agents.rule_based import RuleBasedAgent
+from hybrid_arena.minimoba.reward_shaper import RewardConfig
 from hybrid_arena.training.evaluator import evaluate_policy
 from hybrid_arena.training.trainer import Trainer
+
+
+def _build_reward_config(cfg: dict) -> RewardConfig | None:
+    """Build RewardConfig from YAML reward section. Returns None if not present."""
+    reward_cfg = cfg.get("reward", {})
+    if not reward_cfg:
+        return None
+    return RewardConfig(**{k: v for k, v in reward_cfg.items() if hasattr(RewardConfig, k)})
 
 
 def parse_args() -> argparse.Namespace:
@@ -101,6 +110,7 @@ def _train_model(algo: str, seed: int, total_timesteps: int, config: dict) -> st
 
     # Build training config
     training_cfg = config.get("training", {})
+    reward_config = _build_reward_config(config)
     ppo_config = PPOConfig(
         map_size=config.get("experiment", {}).get("map_size", 32),
         team_size=config.get("experiment", {}).get("team_size", 4),
@@ -111,6 +121,7 @@ def _train_model(algo: str, seed: int, total_timesteps: int, config: dict) -> st
         num_steps=training_cfg.get("num_steps", 128),
         device=training_cfg.get("device", "cpu"),
         seed=seed,
+        reward_config=reward_config,
     )
 
     # Set seeds
@@ -146,16 +157,19 @@ def _train_model(algo: str, seed: int, total_timesteps: int, config: dict) -> st
 def _write_summary(path: Path, rows: list[dict]) -> None:
     header = (
         "| algo | seed | opponent | win_rate | draw_rate | hard_win | timeout_win | timeout_draw | "
-        "avg_reward | avg_len | towers_destroyed | tower_hp_adv | fps |"
+        "avg_reward | avg_len | towers | tower_hp | tower_dmg | base_dmg | enemy_base_hp | base_exp | fps |"
     )
-    sep = "|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"
+    sep = "|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"
     lines = [header, sep]
     for row in rows:
         lines.append(
             "| {algo} | {seed} | {opponent} | {win_rate:.3f} | {draw_rate:.3f} | "
             "{hard_win_rate:.3f} | {timeout_win_rate:.3f} | {timeout_draw_rate:.3f} | "
             "{avg_reward:.3f} | {avg_len:.1f} | {avg_towers_destroyed:.1f} | "
-            "{avg_tower_hp_advantage:.1f} | {fps:.1f} |".format(**row)
+            "{avg_tower_hp_advantage:.1f} | {avg_tower_damage:.1f} | {avg_base_damage:.1f} | "
+            "{avg_enemy_base_hp_remaining:.1f} | {base_exposed_rate:.3f} | {fps:.1f} |".format(
+                **row
+            )
         )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -187,10 +201,15 @@ def main() -> None:
         opponents = exp.get("opponents", opponents)
         episodes = exp.get("episodes", episodes)
         max_steps = exp.get("max_steps", max_steps)
+        map_size = exp.get("map_size", map_size)
+        team_size = exp.get("team_size", team_size)
         output_cfg = cfg.get("outputs", {})
         output_dir = Path(output_cfg.get("result_dir", str(output_dir)))
         if train_timesteps is None:
             train_timesteps = cfg.get("training", {}).get("total_timesteps", None)
+
+    # Build reward config from YAML
+    reward_config = _build_reward_config(cfg) if cfg else None
 
     # Determine mode
     mode = args.mode
@@ -250,15 +269,18 @@ def main() -> None:
             # Evaluate against each opponent
             for opponent in opponents:
                 print(f"\n[Eval] {policy_label} vs {opponent} (episodes={episodes})")
+                eval_env_kwargs = {
+                    "map_size": map_size,
+                    "team_size": team_size,
+                    "max_steps": max_steps,
+                }
+                if reward_config is not None:
+                    eval_env_kwargs["reward_config"] = reward_config
                 result = evaluate_policy(
                     policy_fn,
                     opponent_fn=_opponent_policy(opponent),
                     n_episodes=episodes,
-                    env_kwargs={
-                        "map_size": map_size,
-                        "team_size": team_size,
-                        "max_steps": max_steps,
-                    },
+                    env_kwargs=eval_env_kwargs,
                     seed_offset=seed,
                 )
                 rows.append(
@@ -275,6 +297,12 @@ def main() -> None:
                         "avg_len": result["avg_episode_length"],
                         "avg_towers_destroyed": result["avg_towers_destroyed"],
                         "avg_tower_hp_advantage": result["avg_tower_hp_advantage"],
+                        "avg_tower_damage": result.get("avg_tower_damage", 0.0),
+                        "avg_base_damage": result.get("avg_base_damage", 0.0),
+                        "avg_enemy_base_hp_remaining": result.get(
+                            "avg_enemy_base_hp_remaining", 0.0
+                        ),
+                        "base_exposed_rate": result.get("base_exposed_rate", 0.0),
                         "fps": result["fps"],
                     }
                 )
@@ -296,6 +324,10 @@ def main() -> None:
                 "avg_len",
                 "avg_towers_destroyed",
                 "avg_tower_hp_advantage",
+                "avg_tower_damage",
+                "avg_base_damage",
+                "avg_enemy_base_hp_remaining",
+                "base_exposed_rate",
                 "fps",
             ],
         )

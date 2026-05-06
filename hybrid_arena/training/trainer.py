@@ -64,6 +64,8 @@ class Trainer:
             "max_steps": config.max_steps,
             "fog_of_war": config.fog_of_war,
         }
+        if config.reward_config is not None:
+            env_kwargs["reward_config"] = config.reward_config
         if config.num_envs > 1:
             self.env = SyncParallelEnvRunner(
                 num_envs=config.num_envs,
@@ -345,7 +347,8 @@ class Trainer:
             # Wrap single obs into batch
             obs_b = {
                 k: torch.tensor(v, dtype=torch.float32, device=self.device).unsqueeze(0)
-                for k, v in obs.items() if k != "action_mask"
+                for k, v in obs.items()
+                if k != "action_mask"
             }
             obs_b["action_mask"] = torch.tensor(
                 obs["action_mask"], dtype=torch.int8, device=self.device
@@ -356,6 +359,7 @@ class Trainer:
 
         # Evaluate vs rule-based baseline
         from hybrid_arena.minimoba.agents.rule_based import RuleBasedAgent
+
         rule_agent = RuleBasedAgent()
 
         def opponent_fn(obs, agent_id):
@@ -416,23 +420,28 @@ class Trainer:
         return {
             "local_map": torch.tensor(
                 np.stack([obs[a]["local_map"] for a in agents]),
-                dtype=torch.float32, device=self.device,
+                dtype=torch.float32,
+                device=self.device,
             ),
             "self_state": torch.tensor(
                 np.stack([obs[a]["self_state"] for a in agents]),
-                dtype=torch.float32, device=self.device,
+                dtype=torch.float32,
+                device=self.device,
             ),
             "teammate_states": torch.tensor(
                 np.stack([obs[a]["teammate_states"] for a in agents]),
-                dtype=torch.float32, device=self.device,
+                dtype=torch.float32,
+                device=self.device,
             ),
             "global_info": torch.tensor(
                 np.stack([obs[a]["global_info"] for a in agents]),
-                dtype=torch.float32, device=self.device,
+                dtype=torch.float32,
+                device=self.device,
             ),
             "action_mask": torch.tensor(
                 np.stack([obs[a]["action_mask"] for a in agents]),
-                dtype=torch.int8, device=self.device,
+                dtype=torch.int8,
+                device=self.device,
             ),
         }
 

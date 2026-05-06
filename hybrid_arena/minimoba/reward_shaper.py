@@ -20,5 +20,12 @@ class RewardConfig:
     lose: float = -5.0
     time_penalty: float = -0.001
 
+    # Objective shaping (Phase F13)
+    objective_enabled: bool = True
+    objective_tower_damage_team: float = 0.001
+    objective_base_damage_team: float = 0.003
+    objective_base_exposed_team: float = 1.0
+    objective_step_cap_team: float = 0.25
+
 
 DEFAULT_REWARD_CONFIG = RewardConfig()

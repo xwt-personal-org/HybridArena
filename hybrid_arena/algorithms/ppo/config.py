@@ -1,6 +1,10 @@
 """PPO algorithm configuration."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
+
+from hybrid_arena.minimoba.reward_shaper import RewardConfig
 
 
 @dataclass
@@ -12,6 +16,9 @@ class PPOConfig:
     team_size: int = 4
     max_steps: int = 1000
     fog_of_war: bool = True
+
+    # Reward shaping (Phase F13)
+    reward_config: RewardConfig | None = None
 
     # Training budget
     total_timesteps: int = 3_000_000

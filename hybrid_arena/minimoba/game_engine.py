@@ -78,6 +78,13 @@ class GameState:
         self.game_winner: str | None = None
         self.terminal_reason: str | None = None
 
+        # Objective diagnostic counters (Phase F13)
+        self.red_tower_damage = 0.0
+        self.blue_tower_damage = 0.0
+        self.red_base_damage = 0.0
+        self.blue_base_damage = 0.0
+        self.base_exposed_rewarded: dict[str, bool] = {"red": False, "blue": False}
+
         self.episode_rewards: dict[str, float] = {}
 
     def reset(self, seed: int | None = None):
@@ -93,6 +100,11 @@ class GameState:
         self.blue_towers = 2
         self.game_winner = None
         self.terminal_reason = None
+        self.red_tower_damage = 0.0
+        self.blue_tower_damage = 0.0
+        self.red_base_damage = 0.0
+        self.blue_base_damage = 0.0
+        self.base_exposed_rewarded = {"red": False, "blue": False}
         self.agents = self.possible_agents[:]
 
         self.terrain, spawns = generate_map(
@@ -451,6 +463,28 @@ class GameState:
         attacker.damage_dealt += actual
         step_rewards[attacker_id] += self.reward_config.damage * actual
 
+        # Track diagnostic counters
+        if structure.structure_type == "tower":
+            if attacker.team == "red":
+                self.red_tower_damage += actual
+            else:
+                self.blue_tower_damage += actual
+        elif structure.structure_type == "base":
+            if attacker.team == "red":
+                self.red_base_damage += actual
+            else:
+                self.blue_base_damage += actual
+
+        # Objective progress reward (Phase F13)
+        rc = self.reward_config
+        if rc.objective_enabled:
+            if structure.structure_type == "tower":
+                team_amount = actual * rc.objective_tower_damage_team
+            else:
+                team_amount = actual * rc.objective_base_damage_team
+            team_amount = min(team_amount, rc.objective_step_cap_team)
+            self._add_team_reward(step_rewards, attacker.team, team_amount)
+
         if was_alive and not structure.alive:
             self._handle_structure_destroy(attacker_id, attacker.team, structure, step_rewards)
 
@@ -471,6 +505,16 @@ class GameState:
             else:
                 self.blue_gold += 300
             self._sync_structure_counts()
+
+            # Base exposed one-time reward (Phase F13)
+            rc = self.reward_config
+            if rc.objective_enabled and self._alive_tower_count(structure.team) == 0:
+                enemy_team = structure.team
+                if not self.base_exposed_rewarded.get(enemy_team, False):
+                    self.base_exposed_rewarded[enemy_team] = True
+                    self._add_team_reward(
+                        step_rewards, attacker_team, rc.objective_base_exposed_team
+                    )
             return
 
         if structure.structure_type == "base":
@@ -481,6 +525,21 @@ class GameState:
     def _sync_structure_counts(self) -> None:
         self.red_towers = self._alive_tower_count("red")
         self.blue_towers = self._alive_tower_count("blue")
+
+    def _add_team_reward(
+        self,
+        step_rewards: dict[str, float],
+        team: str,
+        amount: float,
+        *,
+        divide_by_team_size: bool = True,
+    ) -> None:
+        if amount <= 0:
+            return
+        per_agent = amount / self.team_size if divide_by_team_size else amount
+        for agent_id in self.possible_agents:
+            if agent_id.startswith(team):
+                step_rewards[agent_id] += per_agent
 
     def _alive_tower_count(self, team: str) -> int:
         return sum(

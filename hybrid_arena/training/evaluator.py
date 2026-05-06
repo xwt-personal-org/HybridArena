@@ -65,6 +65,10 @@ def evaluate_policy(
     total_deaths = {"red": 0, "blue": 0}
     towers_destroyed = []
     tower_hp_advantages = []
+    tower_damages = []
+    base_damages = []
+    enemy_base_hp_remaining = []
+    base_exposed_count = 0
     start_time = time.time()
 
     for ep in range(n_episodes):
@@ -134,6 +138,14 @@ def evaluate_policy(
             blue_tower_hp = env.game_state._structure_hp_sum("blue", "tower")
             tower_hp_advantages.append(red_tower_hp - blue_tower_hp)
 
+            # Objective shaping diagnostics (Phase F13)
+            tower_damages.append(getattr(env.game_state, "red_tower_damage", 0.0))
+            base_damages.append(getattr(env.game_state, "red_base_damage", 0.0))
+            blue_base_hp = env.game_state._structure_hp_sum("blue", "base")
+            enemy_base_hp_remaining.append(blue_base_hp)
+            if getattr(env.game_state, "blue_towers", 2) == 0:
+                base_exposed_count += 1
+
     total_games = red_wins + blue_wins + draws
     win_rate = red_wins / total_games if total_games > 0 else 0.0
     elapsed = time.time() - start_time
@@ -169,6 +181,12 @@ def evaluate_policy(
         "avg_tower_hp_advantage": float(np.mean(tower_hp_advantages))
         if tower_hp_advantages
         else 0.0,
+        "avg_tower_damage": float(np.mean(tower_damages)) if tower_damages else 0.0,
+        "avg_base_damage": float(np.mean(base_damages)) if base_damages else 0.0,
+        "avg_enemy_base_hp_remaining": float(np.mean(enemy_base_hp_remaining))
+        if enemy_base_hp_remaining
+        else 0.0,
+        "base_exposed_rate": base_exposed_count / total_games if total_games > 0 else 0.0,
         "fps": total_steps / max(elapsed, 1e-6),
         "total_kills_red": total_kills["red"],
         "total_kills_blue": total_kills["blue"],

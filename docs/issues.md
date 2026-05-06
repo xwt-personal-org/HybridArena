@@ -169,3 +169,22 @@
   1. 需要 objective reward shaping（推基地奖励）引导策略学会终结
   2. 不建议调 reward 权重或上 300k-500k 长训
   3. 优先解决 hard_win_rate=0 的结构性问题
+
+### ISSUE-F13：objective reward shaping — hard_win_rate 仍为 0
+- 严重级别：P2
+- 影响：新增 objective shaping 后 tower_damage 从 ~0 跃升到 1351，但 base_exposed_rate=0、avg_base_damage=0，策略未学会推完塔再推基地
+- 数据（sanity_2v2 objective shaping 100k steps）：
+  - win_rate=0.200, hard_win_rate=0.000, timeout_win_rate=0.200
+  - avg_tower_damage=1351.0（显著提升）
+  - avg_base_damage=0.0, base_exposed_rate=0.0
+  - avg_towers_destroyed=0.267（下降，策略在打塔但没打完）
+- 分析：
+  1. objective shaping 有效引导策略去打塔（tower_damage ↑↑↑）
+  2. 但策略没学会"打完塔再推基地"的过渡（base_exposed_rate=0）
+  3. win_rate 下降（0.400→0.200），可能是因为策略分心打塔而非战斗
+  4. avg_towers_destroyed 下降（0.6→0.267），策略在磨塔但没终结
+- 下一步：
+  1. 考虑 macro-action curriculum / path-to-objective shaping
+  2. 或增加 tower_destroyed bonus 引导策略完成推塔
+  3. 或调整 shaping 参数（增大 objective_base_exposed_team）
+- 状态：已记录，待下一轮 patch

@@ -1,0 +1,26 @@
+experiment:
+  name: sanity_2v2_objective_shaping
+  seeds: [42]
+  algorithms: [ppo]
+  opponents: [random]
+  episodes: 30
+  max_steps: 200
+  map_size: 16
+  team_size: 2
+
+training:
+  total_timesteps: 100000
+  num_steps: 128
+  num_envs: 4
+  device: cpu
+
+reward:
+  objective_enabled: true
+  objective_tower_damage_team: 0.001
+  objective_base_damage_team: 0.003
+  objective_base_exposed_team: 1.0
+  objective_step_cap_team: 0.25
+
+outputs:
+  checkpoint_dir: checkpoints/sanity_2v2_objective_shaping
+  result_dir: results/sanity_2v2_objective_shaping

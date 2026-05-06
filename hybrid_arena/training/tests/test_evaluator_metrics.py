@@ -180,3 +180,37 @@ def test_hard_win_rate_is_base_destroyed_only():
     assert result["hard_win_rate"] <= result["win_rate"] + 1e-9
     # timeout_win_rate should be <= win_rate
     assert result["timeout_win_rate"] <= result["win_rate"] + 1e-9
+
+
+def test_evaluator_contains_objective_shaping_metrics():
+    """Evaluator must return avg_tower_damage, avg_base_damage, base_exposed_rate, etc."""
+    policy = RuleBasedAgent().act
+    opponent = RandomAgent().act
+    result = evaluate_policy(
+        policy,
+        opponent_fn=opponent,
+        n_episodes=5,
+        env_kwargs={"map_size": 16, "team_size": 2, "max_steps": 100},
+        seed_offset=42,
+    )
+    assert "avg_tower_damage" in result
+    assert "avg_base_damage" in result
+    assert "avg_enemy_base_hp_remaining" in result
+    assert "base_exposed_rate" in result
+    assert result["avg_tower_damage"] >= 0.0
+    assert result["avg_base_damage"] >= 0.0
+    assert result["avg_enemy_base_hp_remaining"] >= 0.0
+
+
+def test_base_exposed_rate_in_range():
+    """base_exposed_rate should be between 0 and 1."""
+    policy = RuleBasedAgent().act
+    opponent = RandomAgent().act
+    result = evaluate_policy(
+        policy,
+        opponent_fn=opponent,
+        n_episodes=5,
+        env_kwargs={"map_size": 16, "team_size": 2, "max_steps": 100},
+        seed_offset=42,
+    )
+    assert 0.0 <= result["base_exposed_rate"] <= 1.0

@@ -179,6 +179,18 @@
 - [x] Step F12.6：重训 sanity_2v2（100k steps，1992s）
 - [x] Step F12.7：评估 vs random → hard_win_rate=0.000, timeout_win_rate=0.400
 
+### 模块 F13：Objective Reward Shaping for Hard Wins
+
+- [x] Step F13.1：扩展 RewardConfig objective shaping 字段（objective_enabled/tower_damage_team/base_damage_team/base_exposed_team/step_cap_team）
+- [x] Step F13.2：实现 _add_team_reward helper（game_engine.py）
+- [x] Step F13.3：结构物伤害路径加入 objective progress reward（_damage_structure）
+- [x] Step F13.4：base exposed 一次性 team reward（_handle_structure_destroy）
+- [x] Step F13.5：objective 诊断字段到 GameState（red/blue_tower/base_damage, base_exposed_rewarded）
+- [x] Step F13.6：扩展 evaluator objective 指标（avg_tower_damage, avg_base_damage, avg_enemy_base_hp_remaining, base_exposed_rate）
+- [x] Step F13.7：run_ablation 透传 reward config（PPOConfig.reward_config, Trainer env_kwargs, evaluate_policy env_kwargs）
+- [x] Step F13.8：创建 sanity_2v2_objective_shaping.yaml
+- [x] Step F13.9：100k 重训（2039s）→ hard_win_rate=0.000, tower_damage=1351, base_damage=0, base_exposed_rate=0
+
 ## 已知问题
 
 当前已知问题均已纳入 `docs/plan.md`，Codex 执行时如遇到计划未覆盖的新问题，记录到 `docs/issues.md`。
