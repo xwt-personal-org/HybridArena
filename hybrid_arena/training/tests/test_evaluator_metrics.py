@@ -10,6 +10,9 @@ REQUIRED_FIELDS = [
     "episodes",
     "win_rate",
     "draw_rate",
+    "hard_win_rate",
+    "timeout_win_rate",
+    "timeout_draw_rate",
     "avg_reward",
     "avg_red_reward",
     "avg_blue_reward",
@@ -117,3 +120,43 @@ def test_red_blue_rewards_not_cross_averaged():
         # Margin should be non-zero
         assert result["avg_reward_margin"] != 0.0, \
             "Reward margin should be non-zero when there are wins"
+
+
+def test_evaluator_splits_hard_win_and_timeout_win():
+    """Evaluator must split wins into hard (base_destroyed) and timeout adjudicated."""
+    policy = RuleBasedAgent().act
+    opponent = RandomAgent().act
+    result = evaluate_policy(
+        policy, opponent_fn=opponent, n_episodes=10,
+        env_kwargs={"map_size": 16, "team_size": 2, "max_steps": 100},
+        seed_offset=42,
+    )
+    # Verify all win types are tracked
+    assert "hard_red_wins" in result
+    assert "hard_blue_wins" in result
+    assert "timeout_red_wins" in result
+    assert "timeout_blue_wins" in result
+    assert "timeout_draws" in result
+
+    # hard + timeout wins should equal total wins
+    assert result["hard_red_wins"] + result["timeout_red_wins"] == result["red_wins"]
+    assert result["hard_blue_wins"] + result["timeout_blue_wins"] == result["blue_wins"]
+
+    # hard_win_rate + timeout_win_rate + timeout_draw_rate + other_draws should be <= 1
+    total_accounted = result["hard_win_rate"] + result["timeout_win_rate"] + result["timeout_draw_rate"]
+    assert total_accounted <= 1.0 + 1e-9
+
+
+def test_hard_win_rate_is_base_destroyed_only():
+    """hard_win_rate should only count base_destroyed wins, not timeout adjudicated."""
+    policy = RuleBasedAgent().act
+    opponent = RandomAgent().act
+    result = evaluate_policy(
+        policy, opponent_fn=opponent, n_episodes=10,
+        env_kwargs={"map_size": 16, "team_size": 2, "max_steps": 100},
+        seed_offset=42,
+    )
+    # hard_win_rate should be <= win_rate (since it's a subset)
+    assert result["hard_win_rate"] <= result["win_rate"] + 1e-9
+    # timeout_win_rate should be <= win_rate
+    assert result["timeout_win_rate"] <= result["win_rate"] + 1e-9

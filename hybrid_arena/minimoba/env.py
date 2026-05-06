@@ -100,7 +100,8 @@ class MiniMOBAEnv(ParallelEnv):
         if self.game_state.is_game_over() and not self._game_over_rewarded:
             self._game_over_rewarded = True
             winner = self.game_state.get_winner()
-            if winner in ("red", "blue"):
+            terminal_reason = getattr(self.game_state, "terminal_reason", None)
+            if winner in ("red", "blue") and terminal_reason == "base_destroyed":
                 for agent in self.agents:
                     team = "red" if agent.startswith("red") else "blue"
                     if team == winner:

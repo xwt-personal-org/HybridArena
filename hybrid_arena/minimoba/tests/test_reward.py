@@ -113,14 +113,15 @@ def test_rewards_in_range():
 
 
 def test_win_lose_reward_on_red_win():
-    """When red wins, red agents get win reward and blue agents get lose reward."""
+    """When red wins by base destruction, red agents get win reward and blue agents get lose reward."""
     cfg = RewardConfig(win=5.0, lose=-5.0)
     env = parallel_env(map_size=16, team_size=2, max_steps=500, reward_config=cfg)
     env.reset(seed=42)
     gs = env.game_state
 
-    # Force red win by setting game_winner
+    # Force red win by base destruction
     gs.game_winner = "red"
+    gs.terminal_reason = "base_destroyed"
 
     # Step to trigger game over check
     actions = {a: np.array([0, 0, 0], dtype=np.int64) for a in env.agents}
@@ -159,3 +160,69 @@ def test_draw_no_win_lose_reward():
         # time_penalty = -0.001 * 5 = -0.005
         assert total > -1.0, f"Agent {agent} got suspiciously low reward on draw: {total}"
         assert total < 1.0, f"Agent {agent} got suspiciously high reward on draw: {total}"
+
+
+def test_timeout_advantage_does_not_grant_win_lose_reward():
+    """When timeout occurs with tower/gold advantage, no win/lose terminal reward should be given.
+
+    This is the key test for H-1: timeout adjudicated wins should NOT get terminal reward.
+    """
+    cfg = RewardConfig(win=5.0, lose=-5.0, time_penalty=-0.001)
+    env = parallel_env(map_size=16, team_size=2, max_steps=10, reward_config=cfg)
+    env.reset(seed=42)
+    gs = env.game_state
+
+    # Give red a tower advantage (but no base destruction)
+    # This simulates timeout with advantage - get_winner() will return "red"
+    gs.red_towers = 2
+    gs.blue_towers = 1
+    gs.red_gold = 1000
+    gs.blue_gold = 500
+
+    # Run until timeout
+    all_rewards = []
+    while env.agents:
+        actions = {a: np.array([0, 0, 0], dtype=np.int64) for a in env.agents}
+        _, rewards, terms, truncs, _ = env.step(actions)
+        all_rewards.append(rewards)
+        if not env.agents:
+            break
+
+    # Verify terminal_reason is timeout
+    assert gs.terminal_reason == "timeout", f"Expected terminal_reason='timeout', got '{gs.terminal_reason}'"
+    # Verify get_winner returns "red" (adjudicated win)
+    assert gs.get_winner() == "red", f"Expected winner='red', got '{gs.get_winner()}'"
+
+    # But no win/lose terminal reward should be given
+    for agent in gs.possible_agents:
+        total = sum(r.get(agent, 0.0) for r in all_rewards)
+        # Only time_penalty should apply, no win/lose
+        # time_penalty = -0.001 * 10 = -0.01
+        assert total > -1.0, f"Agent {agent} got suspiciously low reward: {total}"
+        assert total < 1.0, f"Agent {agent} got suspiciously high reward: {total}"
+
+
+def test_base_destroyed_grants_win_lose_reward():
+    """When base is destroyed, win/lose terminal reward should be given."""
+    cfg = RewardConfig(win=5.0, lose=-5.0, time_penalty=-0.001)
+    env = parallel_env(map_size=16, team_size=2, max_steps=500, reward_config=cfg)
+    env.reset(seed=42)
+    gs = env.game_state
+
+    # Force base destruction
+    gs.game_winner = "red"
+    gs.terminal_reason = "base_destroyed"
+
+    # Step to trigger game over check
+    actions = {a: np.array([0, 0, 0], dtype=np.int64) for a in env.agents}
+    _, rewards, terms, _, _ = env.step(actions)
+
+    # Verify terminal_reason
+    assert gs.terminal_reason == "base_destroyed"
+
+    # Win/lose reward should be given
+    for agent in gs.possible_agents:
+        if agent.startswith("red"):
+            assert rewards[agent] > 0, f"Red agent {agent} should get positive reward on base destroy"
+        else:
+            assert rewards[agent] < 0, f"Blue agent {agent} should get negative reward on base destroy"

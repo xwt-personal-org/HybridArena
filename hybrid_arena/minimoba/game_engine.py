@@ -76,6 +76,7 @@ class GameState:
         self.red_towers = 2
         self.blue_towers = 2
         self.game_winner: str | None = None
+        self.terminal_reason: str | None = None
 
         self.episode_rewards: dict[str, float] = {}
 
@@ -91,6 +92,7 @@ class GameState:
         self.red_towers = 2
         self.blue_towers = 2
         self.game_winner = None
+        self.terminal_reason = None
         self.agents = self.possible_agents[:]
 
         self.terrain, spawns = generate_map(self.map_size, self.team_size, seed=self.rng.randint(0, 2**31))
@@ -458,6 +460,7 @@ class GameState:
         if structure.structure_type == "base":
             step_rewards[attacker_id] += getattr(self.reward_config, "base", 0.0)
             self.game_winner = attacker_team
+            self.terminal_reason = "base_destroyed"
 
     def _sync_structure_counts(self) -> None:
         self.red_towers = self._alive_tower_count("red")
@@ -718,6 +721,8 @@ class GameState:
 
     def is_game_over(self) -> bool:
         if self.step_count >= self.max_steps:
+            if self.terminal_reason is None:
+                self.terminal_reason = "timeout"
             return True
         if self.game_winner is not None:
             return True

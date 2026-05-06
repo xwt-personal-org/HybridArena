@@ -53,6 +53,11 @@ def evaluate_policy(
     red_wins = 0
     blue_wins = 0
     draws = 0
+    hard_red_wins = 0
+    hard_blue_wins = 0
+    timeout_red_wins = 0
+    timeout_blue_wins = 0
+    timeout_draws = 0
     episode_red_rewards = []
     episode_blue_rewards = []
     episode_lengths = []
@@ -96,12 +101,23 @@ def evaluate_policy(
 
         if env.is_game_over:
             winner = env.game_state.get_winner() if env.game_state else None
+            terminal_reason = getattr(env.game_state, "terminal_reason", None) if env.game_state else None
             if winner == "red":
                 red_wins += 1
+                if terminal_reason == "base_destroyed":
+                    hard_red_wins += 1
+                else:
+                    timeout_red_wins += 1
             elif winner == "blue":
                 blue_wins += 1
+                if terminal_reason == "base_destroyed":
+                    hard_blue_wins += 1
+                else:
+                    timeout_blue_wins += 1
             else:
                 draws += 1
+                if terminal_reason == "timeout":
+                    timeout_draws += 1
 
             total_kills["red"] += getattr(env.game_state, "red_kills", 0)
             total_kills["blue"] += getattr(env.game_state, "blue_kills", 0)
@@ -128,9 +144,17 @@ def evaluate_policy(
         "episodes": total_games,
         "win_rate": win_rate,
         "draw_rate": draws / total_games if total_games > 0 else 0.0,
+        "hard_win_rate": hard_red_wins / total_games if total_games > 0 else 0.0,
+        "timeout_win_rate": timeout_red_wins / total_games if total_games > 0 else 0.0,
+        "timeout_draw_rate": timeout_draws / total_games if total_games > 0 else 0.0,
         "red_wins": red_wins,
         "blue_wins": blue_wins,
         "draws": draws,
+        "hard_red_wins": hard_red_wins,
+        "hard_blue_wins": hard_blue_wins,
+        "timeout_red_wins": timeout_red_wins,
+        "timeout_blue_wins": timeout_blue_wins,
+        "timeout_draws": timeout_draws,
         "avg_reward": avg_red_reward,
         "avg_red_reward": avg_red_reward,
         "avg_blue_reward": avg_blue_reward,

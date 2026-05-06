@@ -133,3 +133,20 @@
   - ❌ avg_len 仍为 200：策略未学会终结游戏，靠 timeout 判胜
   - **根因**：策略需要学会推基地终结游戏，当前靠 towers/kills 优势在 timeout 时判胜
 - **状态**：已验证修复有效，但需 objective/reward shaping 解决终结问题
+
+### ISSUE-F12：terminal semantics split — timeout 优势判胜不应发训练 terminal reward
+- 严重级别：P1
+- 影响：timeout 时 towers/gold/kills 优势判胜仍触发 win/lose terminal reward，强化"拖到裁判判胜"而非"推基地终结"
+- 数据：
+  - sanity_2v2 重训 win_rate=46.7%，但 avg_len=200，说明所有 win 都是 timeout adjudicated
+  - get_winner() 在 timeout 时按 towers/gold/kills 优势返回 red/blue，env.py 继续发 win/lose reward
+- 根因：
+  - game_engine.py 缺少 terminal_reason 字段
+  - env.py 不区分 base_destroyed 和 timeout，统一发 win/lose reward
+  - evaluator.py 不拆分 hard_win（base_destroyed）和 timeout_win（adjudicated）
+- 修复方案：
+  1. game_engine.py 增加 terminal_reason: "base_destroyed" | "timeout" | None
+  2. env.py 仅在 terminal_reason == "base_destroyed" 时发 win/lose terminal reward
+  3. evaluator.py 新增 hard_win_rate、timeout_win_rate、timeout_draw_rate
+  4. 补测试覆盖 timeout advantage 场景
+- 状态：已修复（2026-05-06），待重训验证 hard_win_rate vs timeout_win_rate 分布
