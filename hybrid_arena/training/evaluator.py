@@ -53,7 +53,8 @@ def evaluate_policy(
     red_wins = 0
     blue_wins = 0
     draws = 0
-    episode_rewards = []
+    episode_red_rewards = []
+    episode_blue_rewards = []
     episode_lengths = []
     total_kills = {"red": 0, "blue": 0}
     total_deaths = {"red": 0, "blue": 0}
@@ -63,7 +64,8 @@ def evaluate_policy(
 
     for ep in range(n_episodes):
         obs, _ = env.reset(seed=seed_offset + ep)
-        ep_reward = 0.0
+        ep_red_reward = 0.0
+        ep_blue_reward = 0.0
         steps = 0
 
         while env.agents:
@@ -78,13 +80,18 @@ def evaluate_policy(
                         actions[agent] = _call_policy(policy_fn, obs[agent], agent)
 
             obs, rewards, terms, truncs, infos = env.step(actions)
-            ep_reward += sum(rewards.values()) / len(rewards) if rewards else 0.0
+            for agent_id, r in rewards.items():
+                if agent_id.startswith("red"):
+                    ep_red_reward += r
+                else:
+                    ep_blue_reward += r
             steps += 1
 
             if any(terms.values()) or any(truncs.values()):
                 break
 
-        episode_rewards.append(ep_reward)
+        episode_red_rewards.append(ep_red_reward)
+        episode_blue_rewards.append(ep_blue_reward)
         episode_lengths.append(steps)
 
         if env.is_game_over:
@@ -114,6 +121,9 @@ def evaluate_policy(
     elapsed = time.time() - start_time
     total_steps = sum(episode_lengths)
 
+    avg_red_reward = float(np.mean(episode_red_rewards)) if episode_red_rewards else 0.0
+    avg_blue_reward = float(np.mean(episode_blue_rewards)) if episode_blue_rewards else 0.0
+
     return {
         "episodes": total_games,
         "win_rate": win_rate,
@@ -121,7 +131,10 @@ def evaluate_policy(
         "red_wins": red_wins,
         "blue_wins": blue_wins,
         "draws": draws,
-        "avg_reward": float(np.mean(episode_rewards)) if episode_rewards else 0.0,
+        "avg_reward": avg_red_reward,
+        "avg_red_reward": avg_red_reward,
+        "avg_blue_reward": avg_blue_reward,
+        "avg_reward_margin": avg_red_reward - avg_blue_reward,
         "avg_length": float(np.mean(episode_lengths)) if episode_lengths else 0.0,
         "avg_episode_length": float(np.mean(episode_lengths)) if episode_lengths else 0.0,
         "avg_kills": float(total_kills["red"] / max(n_episodes, 1)),

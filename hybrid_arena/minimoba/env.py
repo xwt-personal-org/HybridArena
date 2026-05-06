@@ -100,12 +100,14 @@ class MiniMOBAEnv(ParallelEnv):
         if self.game_state.is_game_over() and not self._game_over_rewarded:
             self._game_over_rewarded = True
             winner = self.game_state.get_winner()
+            if winner in ("red", "blue"):
+                for agent in self.agents:
+                    team = "red" if agent.startswith("red") else "blue"
+                    if team == winner:
+                        step_rewards[agent] += self.game_state.reward_config.win
+                    else:
+                        step_rewards[agent] += self.game_state.reward_config.lose
             for agent in self.agents:
-                team = "red" if agent.startswith("red") else "blue"
-                if team == winner:
-                    step_rewards[agent] += self.game_state.reward_config.win
-                else:
-                    step_rewards[agent] += self.game_state.reward_config.lose
                 terminations[agent] = True
 
         if self.game_state.step_count >= self.max_steps:

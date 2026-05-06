@@ -110,3 +110,52 @@ def test_rewards_in_range():
             assert -10.0 < reward < 10.0, f"Reward out of range for {agent}: {reward}"
         if not env.agents:
             break
+
+
+def test_win_lose_reward_on_red_win():
+    """When red wins, red agents get win reward and blue agents get lose reward."""
+    cfg = RewardConfig(win=5.0, lose=-5.0)
+    env = parallel_env(map_size=16, team_size=2, max_steps=500, reward_config=cfg)
+    env.reset(seed=42)
+    gs = env.game_state
+
+    # Force red win by setting game_winner
+    gs.game_winner = "red"
+
+    # Step to trigger game over check
+    actions = {a: np.array([0, 0, 0], dtype=np.int64) for a in env.agents}
+    _, rewards, terms, _, _ = env.step(actions)
+
+    # Check win/lose rewards were applied
+    for agent in gs.possible_agents:
+        if agent.startswith("red"):
+            # Red should get win reward (plus other step rewards)
+            assert rewards[agent] > 0, f"Red agent {agent} should get positive reward on win"
+        else:
+            # Blue should get lose reward (plus other step rewards)
+            assert rewards[agent] < 0, f"Blue agent {agent} should get negative reward on lose"
+
+
+def test_draw_no_win_lose_reward():
+    """On draw (timeout), no win/lose reward should be given."""
+    cfg = RewardConfig(win=5.0, lose=-5.0, time_penalty=-0.001)
+    env = parallel_env(map_size=16, team_size=2, max_steps=5, reward_config=cfg)
+    env.reset(seed=42)
+
+    # Run until timeout
+    all_rewards = []
+    while env.agents:
+        actions = {a: np.array([0, 0, 0], dtype=np.int64) for a in env.agents}
+        _, rewards, terms, truncs, _ = env.step(actions)
+        all_rewards.append(rewards)
+        if not env.agents:
+            break
+
+    # On draw, win/lose reward should NOT be given
+    # Sum rewards for each agent - should only contain step rewards, not win/lose
+    for agent in env.game_state.possible_agents:
+        total = sum(r.get(agent, 0.0) for r in all_rewards)
+        # With max_steps=5, only time_penalty applies, no win/lose
+        # time_penalty = -0.001 * 5 = -0.005
+        assert total > -1.0, f"Agent {agent} got suspiciously low reward on draw: {total}"
+        assert total < 1.0, f"Agent {agent} got suspiciously high reward on draw: {total}"

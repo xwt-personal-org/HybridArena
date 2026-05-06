@@ -89,4 +89,25 @@
   1. 修复 evaluator：只计算 red team 的 reward（P0，结构性缺陷）
   2. 验证 win/lose reward 在 episode 结束时正确发放
   3. 修复后再跑 sanity_2v2 验证
-- 状态：已记录，待修复 evaluator 和 reward 结构
+- 状态：已修复 evaluator 和 draw reward，待重训验证
+
+#### 修复记录（2026-05-06）
+- **evaluator.py 修复**：
+  - `avg_reward` 改为只统计 red team reward（不再跨两队平均）
+  - 新增 `avg_red_reward`、`avg_blue_reward`、`avg_reward_margin` 指标
+  - `avg_reward == avg_red_reward`（保持向后兼容）
+- **env.py 修复**：
+  - draw 时不再发放 win/lose reward（`winner in ("red", "blue")` 才发放）
+  - 避免 draw 时所有 agent 都收到 lose reward
+- **新增测试**：
+  - `test_evaluator_metrics.py`：验证 avg_reward == avg_red_reward、margin 计算、不跨队平均
+  - `test_reward.py`：验证 red win 时正确发放 win/lose、draw 时不误发 win/lose
+- **ep_len 不一致根因**：
+  - 训练曲线 ep_len≈34 是 SyncParallelEnvRunner 多环境下的统计值（4 env 交替结束，计数器重置间隔短）
+  - 评估 avg_len=200 是单环境评估，所有 episode 跑满 max_steps
+  - **结论**：eval_only 重跑结果 win_rate=0.267（修正后），但所有 episode 仍为 200 步
+  - 策略未学会终结（推基地），只是在 timeout 时靠 towers/kills 优势判胜
+  - **评估口径可信**，但训练信号本身仍需加强（需要更多 steps 或 reward shaping）
+- **eval_only 重跑结果**（修正后）：
+  - ppo seed=42 vs random: win_rate=0.267, draw_rate=0.333, avg_reward=12.953, avg_len=200.0
+  - 对比修正前: win_rate=0.333→0.267, avg_reward=6.183→12.953（red team 口径更准确）
