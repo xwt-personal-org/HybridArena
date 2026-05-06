@@ -148,6 +148,17 @@
 - [x] Step F9.5：更新 experiment-report-v0.md、README.md、progress.md
 - [x] Step F9.6：DualClipPPO 未改善（对 random 0% vs ppo 16.7%），记录为训练信号诊断入口，不继续完整矩阵
 
+### 模块 F10：训练信号诊断 — sanity_2v2
+
+- [x] Step F10.1：创建 `configs/experiments/sanity_2v2.yaml`（2v2, map_size=16, max_steps=200）
+- [x] Step F10.2：修改 Trainer 支持 training_curve 累积和 CSV 导出
+- [x] Step F10.3：训练 PPO seed=42, 100k steps（2v2 simplified, 2069s）
+- [x] Step F10.4：评估 vs random, 30 episodes → win_rate=33.3%, draw_rate=33.3%
+- [x] Step F10.5：导出训练曲线 CSV（781 数据点）
+- [x] Step F10.6：对比 4v4 baseline，确认环境复杂度是因素之一
+- [x] Step F10.7：诊断 evaluator 跨两队平均问题 + draw_rate timeout 问题
+- [x] Step F10.8：记录 ISSUE-F11，更新 experiment-report-v0.md、issues.md、report.md
+
 ## 已知问题
 
 当前已知问题均已纳入 `docs/plan.md`，Codex 执行时如遇到计划未覆盖的新问题，记录到 `docs/issues.md`。

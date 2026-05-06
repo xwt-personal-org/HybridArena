@@ -107,3 +107,67 @@ python -m hybrid_arena.scripts.run_ablation --config configs/experiments/baselin
   2. 检查训练曲线（entropy、clip_fraction、value_loss）判断是否在学习
   3. 简化环境（2v2、更小地图）验证算法正确性
   4. 或使用 GPU 加速训练以获得更长训练量
+
+---
+
+## sanity_2v2：简化环境训练信号诊断
+
+> **目的**：验证训练闭环是否能在低复杂度环境下有效学习，区分「环境复杂度问题」与「训练闭环 bug」。
+>
+> **结论**：2v2 环境下 PPO 有明显学习信号（win_rate 33.3% vs 4v4 的 16.7%），但未达 50% 验收阈值。
+> 不上 300k-500k 长训，需先修复 evaluator 和 reward 结构问题。
+
+### 实验配置
+
+- 配置文件：`configs/experiments/sanity_2v2.yaml`
+- 训练步数：100,000
+- 评估 episodes：30
+- max_steps：200
+- 训练环境：map_size=16, team_size=2, num_envs=4
+- 训练耗时：2069s (~34.5 分钟, CPU, ~48 FPS)
+
+### 结果
+
+| algo | seed | opponent | win_rate | draw_rate | avg_reward | avg_len | avg_towers_destroyed | avg_tower_hp_advantage | fps |
+|---|---:|---|---:|---:|---:|---:|---:|---:|---:|
+| ppo | 42 | random | 0.333 | 0.333 | 6.183 | 200.0 | 0.6 | 120.0 | 369.6 |
+
+### 训练曲线关键指标
+
+| Step | Reward | EpLen | PolicyLoss | ValueLoss | Entropy | Clip% | KL |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 256 | +6.69 | 200 | -0.008 | 0.896 | 4.546 | 6.7% | 0.006 |
+| 10,240 | +13.27 | 180 | -0.014 | 1.222 | 4.238 | 15.4% | 0.011 |
+| 20,224 | +5.09 | 43 | -0.026 | 1.227 | 4.194 | 17.3% | 0.011 |
+| 50,176 | +5.27 | 40 | -0.025 | 0.996 | 4.169 | 18.2% | 0.012 |
+| 100,000 | +6.20 | 35 | -0.034 | 1.405 | 4.237 | 13.5% | 0.009 |
+
+### 分析
+
+**正面信号（证明训练在学习）**：
+- episode length 从 200（timeout）收敛到 34-40 步，说明 agent 学会了交战
+- win_rate 从 4v4 的 16.7% 提升到 33.3%
+- entropy 从 4.55 降到 ~4.0，policy 在变确定性
+- KL 保持健康（0.006-0.014），policy 变化平稳
+- avg_towers_destroyed = 0.6，agent 学会了推塔
+
+**问题信号（未达 50% 阈值的原因）**：
+1. **draw_rate = 33.3%**：三分之一对局 timeout（200 步），agent 没学会终结比赛
+2. **evaluator 奖励跨两队平均**：`sum(rewards.values()) / len(rewards)` 包含了对方负奖励，稀释了胜负信号
+3. **avg_reward 在训练中下降**：从 +9.71（早期）降到 +5.86（晚期），因 episode 缩短导致累积奖励减少
+4. **value_loss 持续偏高**（0.9-2.1），value function 未充分收敛
+
+### 根因判断
+
+问题根源是**训练闭环结构性问题**，不是单纯的环境复杂度：
+
+1. **evaluator 设计缺陷**：evaluator 对 reward 取两队平均，导致 win_rate 与 avg_reward 不一致
+2. **reward 信号强度不足**：win=+5.0, lose=-5.0 对 200 步 episode 的占比偏低
+3. **33% timeout**：agent 学会了交战但没学会推基地，需要更强的 objective 引导
+
+### 下一步建议（ISSUE-F11）
+
+1. 修复 evaluator：只计算 red team 的 reward（排除 blue team）
+2. 检查 reward 基础设施：确认 win/lose reward 在 episode 结束时正确发放
+3. 考虑增大 win/lose reward 或减小 time_penalty 权重
+4. 修复后再跑 sanity_2v2 验证，目标 win_rate ≥ 50%

@@ -1,0 +1,19 @@
+experiment:
+  name: sanity_2v2
+  seeds: [42]
+  algorithms: [ppo]
+  opponents: [random]
+  episodes: 30
+  max_steps: 200
+  map_size: 16
+  team_size: 2
+
+training:
+  total_timesteps: 100000
+  num_steps: 128
+  num_envs: 4
+  device: cpu
+
+outputs:
+  checkpoint_dir: checkpoints/sanity_2v2
+  result_dir: results/sanity_2v2

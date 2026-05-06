@@ -122,6 +122,7 @@ class Trainer:
         self.global_timestep = 0
         self._win_history: list[bool] = []
         self._last_update_info: dict[str, float] = {}
+        self.training_curve: list[dict] = []
 
     def train(self):
         config = self.config
@@ -275,6 +276,7 @@ class Trainer:
             "fps": self.global_timestep / max(elapsed, 1e-6),
             "last_policy_loss": self._last_update_info.get("policy_loss", 0.0),
             "last_value_loss": self._last_update_info.get("value_loss", 0.0),
+            "training_curve": self.training_curve,
         }
 
     def _save_checkpoint(self) -> None:
@@ -323,6 +325,7 @@ class Trainer:
             log_data["dual_clip_fraction"] = info["dual_clip_fraction"]
 
         self.logger.log(log_data, step=self.global_timestep)
+        self.training_curve.append(log_data)
 
         print(
             f"Step {self.global_timestep:7,d} | "

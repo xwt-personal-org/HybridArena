@@ -69,3 +69,24 @@
   2. 检查训练曲线（entropy、clip_fraction、value_loss）判断是否在学习
   3. 简化环境（2v2、更小地图）验证算法正确性
 - 状态：已记录，作为训练信号诊断入口
+
+### ISSUE-F11：sanity_2v2 未达 50% 阈值 — 训练闭环结构性问题
+- 严重级别：P2
+- 影响：2v2 simplified 环境 PPO 100k steps 对 random 胜率 33.3%，未达 50% 验收阈值，不能上 300k-500k 长训
+- 数据：
+  - sanity_2v2 ppo seed=42 vs random: win_rate=0.333, draw_rate=0.333, avg_reward=6.183, avg_len=200.0
+  - 对比 4v4 baseline: win_rate=0.167（提升到 2x，但仍未达标）
+- 训练曲线证据（证明在学习）：
+  - episode length: 200→34（学会了交战）
+  - entropy: 4.55→4.0（policy 在变确定性）
+  - KL: 0.006-0.014（健康范围）
+  - towers_destroyed: 0.6（学会推塔）
+- 根因分析：
+  1. **evaluator 奖励跨两队平均**：`sum(rewards.values()) / len(rewards)` 包含对方负奖励，稀释胜负信号
+  2. **draw_rate = 33.3%**：agent 学会交战但没学会终结（timeout 200 步）
+  3. **value_loss 持续偏高**（0.9-2.1），value function 未收敛
+- 修复优先级：
+  1. 修复 evaluator：只计算 red team 的 reward（P0，结构性缺陷）
+  2. 验证 win/lose reward 在 episode 结束时正确发放
+  3. 修复后再跑 sanity_2v2 验证
+- 状态：已记录，待修复 evaluator 和 reward 结构

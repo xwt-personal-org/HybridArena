@@ -11,6 +11,7 @@ Supports:
 from __future__ import annotations
 
 import argparse
+import csv
 import pickle
 import time
 from pathlib import Path
@@ -221,6 +222,16 @@ def main():
             },
             f,
         )
+
+    # Save training curve CSV
+    curve = result.get("training_curve", [])
+    if curve:
+        curve_path = Path(args.save_dir) / f"{args.algorithm}_seed{args.seed}_curve.csv"
+        with curve_path.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=curve[0].keys())
+            writer.writeheader()
+            writer.writerows(curve)
+        print(f"[Done] Training curve saved to {curve_path}")
 
     print(f"\n[Done] Training finished in {elapsed:.0f}s")
     print(f"[Done] Final checkpoint saved to {args.save_dir}")
