@@ -97,14 +97,9 @@ class Trainer:
                 n_eval_games=20,
             )
 
-        # Evaluator
+        # Evaluator — shares same env_kwargs (including reward_config)
         self.evaluator = Evaluator(
-            env_kwargs={
-                "map_size": config.map_size,
-                "team_size": config.team_size,
-                "max_steps": config.max_steps,
-                "fog_of_war": config.fog_of_war,
-            },
+            env_kwargs=dict(env_kwargs),
             n_eval_episodes=20,
             eval_interval=getattr(config, "eval_interval", 30_000),
         )

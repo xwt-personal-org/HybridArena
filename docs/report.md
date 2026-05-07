@@ -1,12 +1,12 @@
 # Execution Report
 
-## STATUS: ALL_CLEAR
+## STATUS: NEEDS_ESCALATION
 
-> 上次更新：2026-05-06 | plan.md 版本：v2
+> 上次更新：2026-05-07 | plan.md 版本：v2
 
 ## Last Execution
-- 来源：dispatch:patch（Phase F13 objective reward shaping）
-- 摘要：实现 objective reward shaping（tower/base damage team reward + base exposed one-time reward），重训 sanity_2v2 100k steps。tower_damage 从 ~0 跃升到 1351，但 hard_win_rate=0、base_exposed_rate=0，策略未学会推完塔再推基地。
+- 来源：dispatch:fix（Phase F13 review report 修复）
+- 摘要：按 review report 修复 H-1/H-2/H-3/M-1/M-4。修正 report 状态、Trainer eval 口径、默认 shaping 开关、YAML key 校验、补 objective closure 端到端测试。
 
 ## Completed
 - [x] F13.1: `RewardConfig` 新增 objective shaping 字段（objective_enabled/tower_damage_team/base_damage_team/base_exposed_team/step_cap_team）
@@ -25,19 +25,20 @@
 ## Blocked
 - [ ] hard_win_rate=0.0% — objective shaping 引导了 tower_damage 但未引导 base destruction
 - [ ] base_exposed_rate=0.0% — 策略没学会推完塔
+- [ ] avg_base_damage=0.0% — 基地从未被攻击
 - [ ] sanity_2v2 未达 50% 阈值
-- [ ] 300k-500k 长训 — 需 sanity_2v2 达到 50% 后再上
+- [ ] 300k-500k 长训 — 需 scripted objective policy 能稳定打出 base_exposed_rate>0 后再上
 
 ## Discovered Issues
 - ISSUE-F13: objective reward shaping — tower_damage 提升但 base_exposed_rate=0
 - tower_damage=1351（显著提升），但 avg_towers_destroyed=0.267（下降）
 - 策略在磨塔但没学会终结
+- 需架构级调整 reward/action/curriculum，不得进入长训
 
 ## Recommendations
-- 考虑 macro-action curriculum / path-to-objective shaping
-- 或增加 tower_destroyed bonus 引导策略完成推塔
-- 或调整 shaping 参数（增大 objective_base_exposed_team）
-- 不建议上 300k-500k 长训
+- 不得进入 300k-500k 长训，需架构级调整
+- 考虑 macro-action curriculum / tower_destroyed team bonus / path-to-objective shaping
+- 先让 scripted objective policy 能稳定打出 base_exposed_rate>0 和 avg_base_damage>0
 
 ## 实验结果
 

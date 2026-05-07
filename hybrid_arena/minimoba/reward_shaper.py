@@ -21,7 +21,7 @@ class RewardConfig:
     time_penalty: float = -0.001
 
     # Objective shaping (Phase F13)
-    objective_enabled: bool = True
+    objective_enabled: bool = False
     objective_tower_damage_team: float = 0.001
     objective_base_damage_team: float = 0.003
     objective_base_exposed_team: float = 1.0

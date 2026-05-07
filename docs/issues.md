@@ -188,3 +188,10 @@
   2. 或增加 tower_destroyed bonus 引导策略完成推塔
   3. 或调整 shaping 参数（增大 objective_base_exposed_team）
 - 状态：已记录，待下一轮 patch
+
+#### 修复记录（2026-05-07）
+- [Fixed] H-1: `docs/report.md` STATUS 改为 `NEEDS_ESCALATION`，保留 F13 未验收通过事实
+- [Fixed] H-2: `trainer.py` Evaluator 与训练环境共享同一份 `env_kwargs`（含 reward_config）
+- [Fixed] H-3: `RewardConfig.objective_enabled` 默认改为 `False`，避免污染无 shaping 对照
+- [Fixed] M-1: `run_ablation._build_reward_config()` unknown YAML key 现在 fail-fast（raise ValueError）
+- [Fixed] M-4: 补 env.step/action-mask/objective closure 端到端测试（3 个新测试）

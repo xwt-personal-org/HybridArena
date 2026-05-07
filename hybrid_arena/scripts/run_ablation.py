@@ -30,7 +30,11 @@ def _build_reward_config(cfg: dict) -> RewardConfig | None:
     reward_cfg = cfg.get("reward", {})
     if not reward_cfg:
         return None
-    return RewardConfig(**{k: v for k, v in reward_cfg.items() if hasattr(RewardConfig, k)})
+    valid = set(RewardConfig.__dataclass_fields__)
+    unknown = set(reward_cfg) - valid
+    if unknown:
+        raise ValueError(f"Unknown reward config keys: {sorted(unknown)}")
+    return RewardConfig(**reward_cfg)
 
 
 def parse_args() -> argparse.Namespace:
