@@ -1,0 +1,3 @@
+{"case_id":"rag_amf_001","question":"AMF 的职责是什么","gold_doc_id":"5gc-amf"}
+{"case_id":"rag_ran_001","question":"RAN 负责什么","gold_doc_id":"ran-overview"}
+{"case_id":"rag_packet_001","question":"网络丢包排查要看哪些方向","gold_doc_id":"packet-loss"}

@@ -3,15 +3,22 @@
 ## Unreleased
 
 ### Added
+- Added AgentBench mainline with shared core schemas, trace recording, SQLite run storage, FastAPI API, CLI reports, Streamlit demo, and three business scenarios.
+- Added `jd_resume_match`, `telecom_rag`, and `ticket_triage` scenario packages with deterministic offline runners and evaluators.
+- Added AgentBench interview artifacts: architecture doc, demo script, resume bullets, and benchmark report.
 - Added baseline experiment config support for ablation runner (`--config`, `--dry-run`).
 - Added planner trace schema (`PlannerTrace`) and JSONL recorder (`PlannerTraceRecorder`).
 - Added evaluator metrics consistency tests with required fields validation.
 
 ### Changed
+- Reframed README around AgentBench as the project mainline and moved MiniMOBA/RL to the research branch narrative.
 - Expanded CI test coverage from MiniMOBA-only to the full package.
 - Updated result tables with `draw_rate`, `avg_towers_destroyed`, `avg_tower_hp_advantage` columns.
 
 ### Fixed
+- Fixed local Chinese tokenization in the telecom RAG retriever so packet-loss troubleshooting cases are retrieved.
+- Fixed pytest import-name collisions in new scenario test packages by adding package initializers.
+- Added missing `httpx` app dependency required by FastAPI/Starlette `TestClient`.
 - Fixed documentation status inconsistency around GRPO/QLoRA implementation status.
 - Fixed `env.close()` crash when pygame is not installed (now handles ImportError gracefully).
 - Added missing `episodes` field to evaluator result dict.

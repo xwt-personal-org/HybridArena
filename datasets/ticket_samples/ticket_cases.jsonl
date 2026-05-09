@@ -1,0 +1,5 @@
+{"case_id":"ticket_radio_001","ticket_text":"用户投诉 5G 基站覆盖差，室内频繁掉线。","expected_label":"radio_access"}
+{"case_id":"ticket_core_001","ticket_text":"终端注册失败，疑似 AMF 或核心网鉴权异常。","expected_label":"core_network"}
+{"case_id":"ticket_transport_001","ticket_text":"多个站点同时丢包，传输链路抖动明显。","expected_label":"transport"}
+{"case_id":"ticket_device_001","ticket_text":"用户手机无法连接网络，重启后仍无服务。","expected_label":"device"}
+{"case_id":"ticket_billing_001","ticket_text":"用户反馈话费账单异常，套餐扣费不一致。","expected_label":"billing"}

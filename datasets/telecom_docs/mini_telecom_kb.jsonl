@@ -1,0 +1,5 @@
+{"doc_id":"5gc-amf","title":"5GC AMF","source":"local-mini-kb","text":"AMF 是 5G Core 的 Access and Mobility Management Function，负责注册、连接、移动性管理和接入鉴权相关控制面流程。","tags":["5g","core","amf","mobility"]}
+{"doc_id":"5gc-smf","title":"5GC SMF","source":"local-mini-kb","text":"SMF 是 Session Management Function，负责 PDU session 管理、IP 地址分配和用户面路径控制。","tags":["5g","core","smf","session"]}
+{"doc_id":"ran-overview","title":"RAN Overview","source":"local-mini-kb","text":"RAN 是 Radio Access Network，无线接入网负责终端与核心网之间的无线接入、调度和无线资源管理。","tags":["ran","radio","access","wireless"]}
+{"doc_id":"handover-basic","title":"Handover Basics","source":"local-mini-kb","text":"切换流程用于在移动过程中保持业务连续性，通常涉及源小区、目标小区和核心网控制面协调。","tags":["handover","mobility","ran"]}
+{"doc_id":"packet-loss","title":"Packet Loss Troubleshooting","source":"local-mini-kb","text":"网络丢包排查通常检查无线覆盖、传输链路、拥塞、设备故障和 QoS 配置。","tags":["troubleshooting","packet-loss","transport"]}

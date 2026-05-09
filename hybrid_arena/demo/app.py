@@ -1,109 +1,152 @@
-"""Streamlit demo for HybridArena.
+"""Streamlit demo for HybridArena AgentBench.
 
-Usage:
-    streamlit run demo/app.py
-
-Requirements:
-    pip install streamlit
+Run:
+    streamlit run hybrid_arena/demo/app.py
 """
 
 from __future__ import annotations
 
-import time
+import json
+from pathlib import Path
 
 import streamlit as st
 
-st.set_page_config(page_title="HybridArena", layout="wide")
+from hybrid_arena.core.schema import TaskInput
+from hybrid_arena.scenarios.jd_resume_match.runner import JDResumeMatchRunner
+from hybrid_arena.scenarios.telecom_rag.runner import TelecomRagRunner
+from hybrid_arena.scenarios.ticket_triage.runner import TicketTriageRunner
 
-st.title("HybridArena: LLM x DRL 混合智能体对战平台")
+st.set_page_config(page_title="HybridArena AgentBench", layout="wide")
 
-st.markdown(
-    """
-    在自研的4v4不完全信息MOBA环境中，对比不同算法和混合方案的表现。
-    """
-)
+
+def _load_resume_profile() -> dict:
+    path = Path("datasets/jd_samples/resume_profile.json")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _render_result(result) -> None:
+    metric_cols = st.columns(min(4, max(1, len(result.metrics))))
+    for index, (key, value) in enumerate(result.metrics.items()):
+        metric_cols[index % len(metric_cols)].metric(key, value)
+    tab_output, tab_trace = st.tabs(["Output", "Trace"])
+    with tab_output:
+        st.json(result.output)
+    with tab_trace:
+        st.json(result.trace.to_dict())
+
+
+st.title("HybridArena AgentBench")
+st.caption("Agent workflow, RAG, ticket triage, trace, and evaluation in one local demo.")
 
 with st.sidebar:
-    st.header("配置")
-    algo = st.selectbox(
-        "DRL 算法",
-        ["PPO", "Dual-clip PPO", "MAPPO", "QMIX", "COMA"],
+    st.header("场景")
+    page = st.radio(
+        "选择工作流",
+        ["Overview", "JD Match", "Telecom RAG", "Ticket Triage", "Trace Contract"],
     )
-    llm_mode = st.selectbox(
-        "LLM 模式",
-        ["关闭", "Prompt-only", "ReAct", "GRPO-trained"],
-    )
-    opponent = st.selectbox(
-        "对手",
-        ["Rule-Based", "Self-Play Best"],
-    )
-    n_episodes = st.slider("对战局数", 1, 20, 5)
-    use_llm_every = st.slider("LLM 调用频率 (每 N 步)", 1, 20, 10)
-
     st.divider()
     st.markdown(
         """
-        **关于本项目**
-        - 自研 MiniMOBA-4v4 环境
-        - 5 种 DRL 算法统一对比
-        - LLM 高层规划 + DRL 微操控制
-        - QLoRA GRPO 训练 LLM Planner
+        **本地可运行**
+
+        - 不依赖外部 LLM API
+        - 每次运行输出 trace
+        - 与 FastAPI / CLI 共用 runner
         """
     )
 
-if st.button("开始对战", type="primary"):
-    progress = st.progress(0)
-    status = st.empty()
-    log_container = st.container()
+if page == "Overview":
+    st.subheader("平台主线")
+    st.markdown(
+        """
+        HybridArena AgentBench 将原项目中的 planner、evaluator、trace 和 demo 能力迁移到求职导向的业务场景：
+        JD 解析与简历差距分析、通信知识库 RAG、网络工单分诊。
+        """
+    )
+    cols = st.columns(3)
+    cols[0].metric("业务场景", 3)
+    cols[1].metric("核心测试", "37+")
+    cols[2].metric("外部 API 依赖", "0")
+    st.subheader("接口入口")
+    st.code(
+        "\n".join(
+            [
+                "python -m hybrid_arena.services.api.app",
+                "uvicorn hybrid_arena.services.api.app:app --reload",
+                "python -m hybrid_arena.scripts.agentbench_run --scenario ticket_triage --input datasets/ticket_samples/ticket_cases.jsonl --output results/agentbench/ticket_report.json",
+            ]
+        ),
+        language="bash",
+    )
 
-    # Simulated run (no actual model loading in this skeleton)
-    for ep in range(n_episodes):
-        status.text(f"对战中... 第 {ep + 1}/{n_episodes} 局")
+elif page == "JD Match":
+    st.subheader("JD 解析与简历差距分析")
+    jd_text = st.text_area(
+        "JD 文本",
+        "参与 AI Agent 工作流开发，要求熟悉 Python、HTTP API、FastAPI、RAG 和评测题库建设。",
+        height=140,
+    )
+    if st.button("运行 JD Match", type="primary"):
+        runner = JDResumeMatchRunner()
+        result = runner.run(
+            TaskInput(
+                task_id="demo-jd",
+                scenario="jd_resume_match",
+                payload={"jd_text": jd_text, "resume_profile": _load_resume_profile()},
+                metadata={"run_id": "demo-jd-run"},
+            )
+        )
+        _render_result(result)
 
-        # Simulate steps
-        for step in range(100):
-            time.sleep(0.01)
-            progress.progress((ep * 100 + step) / (n_episodes * 100))
+elif page == "Telecom RAG":
+    st.subheader("通信知识库 RAG Copilot")
+    question = st.text_input("问题", "AMF 的职责是什么")
+    top_k = st.slider("Top K", 1, 5, 3)
+    if st.button("运行 RAG", type="primary"):
+        runner = TelecomRagRunner()
+        result = runner.run(
+            TaskInput(
+                task_id="demo-rag",
+                scenario="telecom_rag",
+                payload={"question": question, "top_k": top_k},
+                metadata={"run_id": "demo-rag-run"},
+            )
+        )
+        _render_result(result)
 
-        with log_container:
-            st.write(f"局 {ep + 1}: {'胜利' if ep % 2 == 0 else '失败'} | 步数: {80 + ep * 5}")
+elif page == "Ticket Triage":
+    st.subheader("网络工单分诊与排障建议")
+    ticket_text = st.text_area("工单内容", "用户投诉 5G 基站覆盖差，室内频繁掉线。", height=120)
+    if st.button("运行分诊", type="primary"):
+        runner = TicketTriageRunner()
+        result = runner.run(
+            TaskInput(
+                task_id="demo-ticket",
+                scenario="ticket_triage",
+                payload={"ticket_text": ticket_text},
+                metadata={"run_id": "demo-ticket-run"},
+            )
+        )
+        _render_result(result)
 
-    status.text("对战完成！")
-    progress.empty()
-
-    # Summary metrics
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("胜率", f"{60:.0f}%")
-    col2.metric("平均步数", f"{95:.0f}")
-    col3.metric("平均奖励", f"{2.3:+.2f}")
-    col4.metric("KDA", f"{1.2:.1f}")
-
-    if llm_mode != "关闭":
-        with st.expander("LLM 战术思考过程", expanded=True):
-            st.markdown("**策略**: 团战")
-            st.markdown("**理由**: 敌方全员可见，经济领先，适合集合开团")
-            st.markdown("- tank: 先手开团")
-            st.markdown("- dps_1: 集火敌方后排")
-            st.markdown("- dps_2: 侧翼骚扰")
-            st.markdown("- support: 治疗保护")
-
-st.divider()
-st.subheader("算法对比表")
-
-st.table(
-    {
-        "算法": ["Rule-Based", "PPO", "Dual-clip PPO", "MAPPO", "QMIX", "COMA", "Hybrid (LLM+GRPO)"],
-        "Win Rate": ["50%", "—", "—", "—", "—", "—", "—"],
-        "ELO": ["1000", "—", "—", "—", "—", "—", "—"],
-        "训练时间": ["N/A", "~2.5h", "~3h", "~3.5h", "~3.5h", "~3.5h", "~3h+"],
-    }
+else:
+    st.subheader("Trace Contract")
+    st.markdown(
+        """
+        所有场景返回同一种 `TaskRunResult`，包含业务输出、指标和步骤级 trace。
+        这让 API、CLI、Streamlit demo 和离线评测可以复用同一套 runner。
+        """
+    )
+    st.code(
+        """
+TaskRunResult(
+    run_id="...",
+    task_id="...",
+    scenario="jd_resume_match | telecom_rag | ticket_triage",
+    output={...},
+    metrics={...},
+    trace=TaskTrace(steps=[ToolCallRecord(...)]),
 )
-
-st.markdown(
-    """
-    ---
-    **GitHub**: [HybridArena](https://github.com/yourname/hybrid-arena)
-    | **W&B**: [实验报告](https://wandb.ai/yourname/hybrid-arena)
-    | **技术博客**: [知乎](https://zhuanlan.zhihu.com/yourname)
-    """
-)
+""".strip(),
+        language="python",
+    )

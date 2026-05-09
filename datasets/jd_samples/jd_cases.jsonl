@@ -1,0 +1,2 @@
+{"case_id":"jd_agent_001","jd_text":"参与 AI Agent 工作流开发，要求熟悉 Python、HTTP API、FastAPI、RAG 和评测题库建设。","expected_skills":["python_backend","http_api","agent_workflow","rag","evaluation"]}
+{"case_id":"jd_telecom_001","jd_text":"通信数智化软件测试实习，要求掌握 Python/Shell，熟悉 Linux、自动化测试、通信网络基础和质量报告。","expected_skills":["python_backend","testing","telecom_domain","evaluation"]}

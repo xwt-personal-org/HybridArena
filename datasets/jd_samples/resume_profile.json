@@ -1,0 +1,9 @@
+{
+  "name": "HybridArena Candidate",
+  "skills": ["python_backend", "evaluation", "testing"],
+  "evidence": {
+    "python_backend": ["Implemented HybridArena training and evaluation CLIs"],
+    "evaluation": ["Built evaluator metrics and experiment reports"],
+    "testing": ["Maintained pytest and ruff verification workflow"]
+  }
+}
