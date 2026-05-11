@@ -1,21 +1,30 @@
 {
   "schema_version": "wkstruc-ledger/v9",
   "task_id": "iter-parallel-skill-runtime-20260510",
-  "state": "IN_PROGRESS",
+  "state": "NEEDS_REVIEW",
   "progress": {
-    "done": 0,
+    "done": 9,
     "total": 9,
-    "label": "0 / 9 steps"
+    "label": "9 / 9 steps"
   },
   "last_run": {
-    "at": "2026-05-10T00:00:00",
+    "at": "2026-05-10T12:00:00",
     "agent": "local-execution-agent",
-    "summary": "Started parallel AgentBench skill runtime and RL/MOBA tactical runtime patch"
+    "summary": "Parallel AgentBench skill runtime and RL/MOBA tactical runtime L0/L1 prototypes implemented, merged, and validated."
   },
   "validation": {
-    "status": "NOT_RUN",
-    "commands": [],
-    "summary": "Not run"
+    "status": "PASS",
+    "commands": [
+      "python -m json.tool .ai/ledger.json",
+      "python -m hybrid_arena.scripts.skill_runtime_demo --root . --db .skills/state.db --once",
+      "python -m compileall hybrid_arena",
+      "pytest hybrid_arena/skill_runtime/tests -v",
+      "pytest hybrid_arena/minimoba/tactical_runtime/tests -v",
+      "pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/scripts/tests -v",
+      "pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v",
+      "ruff check hybrid_arena"
+    ],
+    "summary": "All validations pass. 49 skill_runtime tests, 57 tactical_runtime tests, 34 AgentBench regression tests, 96 MiniMOBA/RL regression tests. Ruff clean. Compileall clean."
   },
   "open_items": [],
   "checkpoint_id": "checkpoint-v0",
