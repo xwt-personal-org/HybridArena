@@ -1,0 +1,24 @@
+{
+  "schema_version": "wkstruc-ledger/v9",
+  "task_id": "iter-parallel-skill-runtime-20260510",
+  "state": "IN_PROGRESS",
+  "progress": {
+    "done": 0,
+    "total": 9,
+    "label": "0 / 9 steps"
+  },
+  "last_run": {
+    "at": "2026-05-10T00:00:00",
+    "agent": "local-execution-agent",
+    "summary": "Started parallel AgentBench skill runtime and RL/MOBA tactical runtime patch"
+  },
+  "validation": {
+    "status": "NOT_RUN",
+    "commands": [],
+    "summary": "Not run"
+  },
+  "open_items": [],
+  "checkpoint_id": "checkpoint-v0",
+  "last_review_report": null,
+  "consumed_inbox": []
+}

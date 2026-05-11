@@ -1,0 +1,7 @@
+{
+  "schema_version": "wkstruc-checkpoint/v9",
+  "checkpoint_id": "checkpoint-v0",
+  "created_at": "2026-05-09",
+  "ledger_task_id": "hybridarena-v9-migration",
+  "notes": "v9 migration checkpoint. Phase A+B implemented and tested. Phase C+D planned."
+}
