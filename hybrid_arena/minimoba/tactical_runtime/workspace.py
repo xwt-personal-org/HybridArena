@@ -20,6 +20,7 @@ class BattlefieldAnnotation:
     intensity: float = 1.0
     decay_rate: float = 0.05
     created_at: int = 0
+    last_decay_tick: int = 0
 
 
 @dataclass
@@ -102,8 +103,10 @@ class BattlefieldWorkspace:
         """
         surviving: list[BattlefieldAnnotation] = []
         for ann in self._annotations:
-            age = current_tick - ann.created_at
-            ann.intensity -= ann.decay_rate * age
+            delta = current_tick - ann.last_decay_tick
+            if delta > 0:
+                ann.intensity -= ann.decay_rate * delta
+                ann.last_decay_tick = current_tick
             if ann.intensity > 0:
                 surviving.append(ann)
         self._annotations = surviving

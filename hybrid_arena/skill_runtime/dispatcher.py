@@ -3,13 +3,23 @@
 from __future__ import annotations
 
 import fnmatch
+import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
 from hybrid_arena.skill_runtime.body_schema import BodySchema
 from hybrid_arena.skill_runtime.schema import Skill, WorkspaceEvent
 from hybrid_arena.skill_runtime.workspace import Workspace
+
+ControllerFn = Callable[[Skill, WorkspaceEvent, Workspace], dict]
+_CONTROLLER_REGISTRY: dict[str, ControllerFn] = {}
+
+
+def register_controller(name: str, fn: ControllerFn) -> None:
+    """Register a deterministic controller by name."""
+    _CONTROLLER_REGISTRY[name] = fn
 
 
 @dataclass(frozen=True)
@@ -85,8 +95,9 @@ class ReflexDispatcher:
             return bool(re.fullmatch(trigger_spec, event.path))
         if trigger_kind == "annotation":
             # spec is the tag or status to check
-            paths = workspace.query_paths(any_tag=trigger_spec)
-            return len(paths) > 0
+            tagged_paths = workspace.query_paths(any_tag=trigger_spec)
+            status_paths = workspace.query_paths(status=trigger_spec)
+            return bool(tagged_paths or status_paths)
         return False
 
     # ------------------------------------------------------------------
@@ -157,26 +168,45 @@ class ReflexDispatcher:
     def _execute_skill(self, skill: Skill, event: WorkspaceEvent) -> DispatchResult:
         """Execute the controller for *skill* and record a trace.
 
-        The L0 prototype uses deterministic string-annotation controllers
-        rather than real code execution.  The controller label is stored in
-        the trace for later analysis.
+        The L0 prototype uses local deterministic controllers registered by
+        name. Missing or invalid controllers fail explicitly.
         """
-        try:
-            # In L0 the controller is just a label; we simulate success.
+        controller = _CONTROLLER_REGISTRY.get(skill.controller)
+        if controller is None:
             action_payload = {
+                "error": "Unknown controller",
                 "controller": skill.controller,
-                "skill_id": skill.id,
-                "event_kind": event.kind,
-                "event_path": event.path,
             }
-            residual = 0.0
-            success = True
-            message = f"Executed skill '{skill.name}'."
-        except Exception as exc:  # pragma: no cover — defensive
-            action_payload = {"error": str(exc)}
-            residual = 1.0
             success = False
-            message = f"Skill '{skill.name}' failed: {exc}"
+            residual = 1.0
+            message = f"Skill '{skill.name}' failed: Unknown controller"
+        else:
+            try:
+                action_payload = controller(skill, event, self._workspace)
+                if not isinstance(action_payload, dict):
+                    raise TypeError("Controller must return a dict")
+                json.dumps(action_payload)
+                success = bool(action_payload.get("success", False))
+                residual = 0.0 if success else 1.0
+                if success:
+                    message = str(
+                        action_payload.get(
+                            "message",
+                            f"Executed skill '{skill.name}'.",
+                        )
+                    )
+                else:
+                    message = str(
+                        action_payload.get(
+                            "error",
+                            f"Skill '{skill.name}' failed.",
+                        )
+                    )
+            except Exception as exc:
+                action_payload = {"error": str(exc), "controller": skill.controller}
+                success = False
+                residual = 1.0
+                message = f"Skill '{skill.name}' failed: {exc}"
 
         self._workspace.record_trace(
             skill_id=skill.id,

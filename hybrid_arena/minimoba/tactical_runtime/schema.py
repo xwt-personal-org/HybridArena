@@ -61,7 +61,7 @@ class GameTrigger:
         if self.kind == "enemy_count":
             return self._eval_enemy_count(workspace, game_state, agent_id) * self.salience
         if self.kind == "team_state":
-            return self._eval_team_state(game_state) * self.salience
+            return self._eval_team_state(game_state, agent_id) * self.salience
         if self.kind == "annotation_query":
             return self._eval_annotation_query(workspace, agent_id) * self.salience
         return 0.0
@@ -120,18 +120,27 @@ class GameTrigger:
             return min(count / max(radius, 1), 1.0)
         return 0.0
 
-    def _eval_team_state(self, game_state: object) -> float:
+    def _eval_team_state(self, game_state: object, agent_id: str) -> float:
         """Evaluate team_state trigger.
 
         spec format: "advantage" or "disadvantage"
         """
-        if game_state is None:
+        if game_state is None or not agent_id:
             return 0.0
+        hero = getattr(game_state, "heroes", {}).get(agent_id)
+        if hero is None:
+            return 0.0
+        team = getattr(hero, "team", "")
         red_kills = getattr(game_state, "red_kills", 0)
         blue_kills = getattr(game_state, "blue_kills", 0)
         red_towers = getattr(game_state, "red_towers", 2)
         blue_towers = getattr(game_state, "blue_towers", 2)
-        advantage = (red_kills - blue_kills) + (red_towers - blue_towers) * 2
+        if team == "red":
+            advantage = (red_kills - blue_kills) + (red_towers - blue_towers) * 2
+        elif team == "blue":
+            advantage = (blue_kills - red_kills) + (blue_towers - red_towers) * 2
+        else:
+            return 0.0
         if self.spec == "advantage" and advantage > 0:
             return min(abs(advantage) / 10.0, 1.0)
         if self.spec == "disadvantage" and advantage < 0:

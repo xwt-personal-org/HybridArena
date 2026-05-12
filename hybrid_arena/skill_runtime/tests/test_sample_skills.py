@@ -18,6 +18,12 @@ def ws(tmp_path: Path) -> Workspace:
     return Workspace(root=tmp_path, db_path=tmp_path / "test.db")
 
 
+def _dispatcher_for_skill(ws: Workspace, skill_id: str) -> ReflexDispatcher:
+    skills = [s for s in create_sample_skills(ws) if s.id == skill_id]
+    body = BodySchema(skills=skills, workspace=ws)
+    return ReflexDispatcher(body=body, workspace=ws)
+
+
 class TestSampleSkillCreation:
     """Verify sample skills are created correctly."""
 
@@ -89,3 +95,86 @@ class TestSampleSkillDispatch:
         event = WorkspaceEvent(kind="file_save", path="main.py")
         dispatcher.dispatch(event)
         assert len(ws.get_traces()) == 1
+
+    def test_add_test_for_new_function_creates_pytest_file(
+        self, ws: Workspace
+    ) -> None:
+        source_path = "src/calculator.py"
+        ws.annotate(
+            path=source_path,
+            tags={"needs_test", "py"},
+            status="unknown",
+        )
+        dispatcher = _dispatcher_for_skill(ws, "add_test_for_new_function")
+
+        result = dispatcher.dispatch(
+            WorkspaceEvent(kind="annotation_update", path=source_path)
+        )
+
+        test_path = ws.root / "tests" / "test_calculator.py"
+        assert result.success is True
+        assert test_path.exists()
+        assert "def test_calculator_placeholder" in test_path.read_text()
+        annotation = ws.get_annotation("tests/test_calculator.py")
+        assert annotation is not None
+        assert annotation.tags == frozenset({"generated", "test_file"})
+        assert annotation.status == "passing"
+
+    def test_fix_failing_test_toggles_annotation_to_passing(
+        self, ws: Workspace
+    ) -> None:
+        failing_path = "tests/test_calculator.py"
+        ws.annotate(path=failing_path, tags={"test_file"}, status="failing")
+        dispatcher = _dispatcher_for_skill(ws, "fix_failing_test")
+
+        result = dispatcher.dispatch(
+            WorkspaceEvent(kind="test_fail", path=failing_path)
+        )
+
+        annotation = ws.get_annotation(failing_path)
+        assert result.success is True
+        assert annotation is not None
+        assert annotation.status == "passing"
+        assert annotation.last_skill == "fix_failing_test"
+
+    def test_update_imports_after_rename_modifies_fixture_file(
+        self, ws: Workspace
+    ) -> None:
+        fixture_path = ws.root / "tests" / "test_imports.py"
+        fixture_path.parent.mkdir(parents=True)
+        fixture_path.write_text(
+            "from src.old_module import build\n\n"
+            "def test_build():\n"
+            "    assert build() is not None\n",
+            encoding="utf-8",
+        )
+        dispatcher = _dispatcher_for_skill(ws, "update_imports_after_rename")
+
+        result = dispatcher.dispatch(
+            WorkspaceEvent(
+                kind="file_rename",
+                path="rename_old_module",
+                payload={
+                    "old_name": "src.old_module",
+                    "new_name": "src.new_module",
+                    "paths": ["tests/test_imports.py"],
+                },
+            )
+        )
+
+        assert result.success is True
+        assert "src.new_module" in fixture_path.read_text(encoding="utf-8")
+        assert "src.old_module" not in fixture_path.read_text(encoding="utf-8")
+
+    def test_dispatcher_trace_records_controller_output(
+        self, ws: Workspace
+    ) -> None:
+        dispatcher = _dispatcher_for_skill(ws, "format_on_save")
+
+        dispatcher.dispatch(WorkspaceEvent(kind="file_save", path="src/app.py"))
+
+        trace = ws.get_traces(skill_id="format_on_save")[0]
+        assert trace["output_snapshot"]["controller"] == "mock_annotate_formatted"
+        assert trace["output_snapshot"]["path"] == "src/app.py"
+        assert trace["output_snapshot"]["tags"] == ["formatted", "py"]
+        assert trace["output_snapshot"]["status"] == "passing"

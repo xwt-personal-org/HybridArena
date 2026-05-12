@@ -249,3 +249,42 @@ class TestPushObjectiveSkill:
         result = dispatcher.dispatch(event, game_state=gs, agent_id="red_0")
         assert result.success is True
         assert result.skill_id == "push_objective"
+
+    def test_team_advantage_scores_for_red_agent(self):
+        ws = BattlefieldWorkspace(map_size=32)
+        skills = create_tactical_skills(ws)
+        push = next(s for s in skills if s.id == "push_objective")
+        trigger = push.triggers[0]
+        gs = _StubGameState(
+            heroes={"red_0": _StubHero(team="red")},
+            red_kills=5,
+            blue_kills=1,
+        )
+
+        assert trigger.score(ws, gs, "red_0") > 0
+
+    def test_red_advantage_does_not_score_for_blue_agent(self):
+        ws = BattlefieldWorkspace(map_size=32)
+        skills = create_tactical_skills(ws)
+        push = next(s for s in skills if s.id == "push_objective")
+        trigger = push.triggers[0]
+        gs = _StubGameState(
+            heroes={"blue_0": _StubHero(hero_id="blue_0", team="blue")},
+            red_kills=5,
+            blue_kills=1,
+        )
+
+        assert trigger.score(ws, gs, "blue_0") == 0.0
+
+    def test_team_advantage_scores_for_blue_agent(self):
+        ws = BattlefieldWorkspace(map_size=32)
+        skills = create_tactical_skills(ws)
+        push = next(s for s in skills if s.id == "push_objective")
+        trigger = push.triggers[0]
+        gs = _StubGameState(
+            heroes={"blue_0": _StubHero(hero_id="blue_0", team="blue")},
+            red_kills=1,
+            blue_kills=5,
+        )
+
+        assert trigger.score(ws, gs, "blue_0") > 0
