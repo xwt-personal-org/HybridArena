@@ -130,6 +130,58 @@ class TestBattlefieldWorkspace:
         ws.record_event(GameEvent(kind="test", agent_id="red_0"))
         assert ws.event_count == 1
 
+    def test_snapshot_annotations_returns_independent_copies(self):
+        ws = BattlefieldWorkspace(map_size=32)
+        ws.add_annotation(BattlefieldAnnotation(
+            position=(5, 5),
+            tags={"dangerous", "contested"},
+            intensity=0.75,
+            decay_rate=0.2,
+            created_at=3,
+            last_decay_tick=4,
+        ))
+
+        snapshot = ws.snapshot_annotations()
+        snapshot[0].tags.add("mutated")
+
+        original = ws.query_annotations(position=(5, 5), radius=0)[0]
+        assert snapshot[0].position == (5, 5)
+        assert "mutated" not in original.tags
+
+    def test_export_and_import_annotations_round_trip(self):
+        source = BattlefieldWorkspace(map_size=32)
+        source.add_annotation(BattlefieldAnnotation(
+            position=(4, 7),
+            tags={"resource_soon", "objective"},
+            intensity=0.6,
+            decay_rate=0.03,
+            created_at=2,
+            last_decay_tick=5,
+        ))
+
+        rows = source.export_annotations()
+        assert rows == [
+            {
+                "position": (4, 7),
+                "tags": ["objective", "resource_soon"],
+                "intensity": 0.6,
+                "decay_rate": 0.03,
+                "created_at": 2,
+                "last_decay_tick": 5,
+            }
+        ]
+
+        target = BattlefieldWorkspace(map_size=32)
+        target.import_annotations(rows)
+
+        imported = target.query_annotations(position=(4, 7), radius=0)[0]
+        assert imported.position == (4, 7)
+        assert imported.tags == {"objective", "resource_soon"}
+        assert imported.intensity == 0.6
+        assert imported.decay_rate == 0.03
+        assert imported.created_at == 2
+        assert imported.last_decay_tick == 5
+
     def test_observation_layer_shape(self):
         ws = BattlefieldWorkspace(map_size=32)
         ws.add_annotation(BattlefieldAnnotation(position=(5, 5), tags={"dangerous"}))

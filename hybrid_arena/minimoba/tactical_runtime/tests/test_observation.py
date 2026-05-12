@@ -7,7 +7,12 @@ import pytest
 
 from hybrid_arena.minimoba.tactical_runtime.observation import (
     append_pheromone_channels,
+    build_augmented_observation,
     crop_pheromone_layer,
+)
+from hybrid_arena.minimoba.tactical_runtime.workspace import (
+    BattlefieldAnnotation,
+    BattlefieldWorkspace,
 )
 
 
@@ -72,3 +77,39 @@ class TestAppendPheromoneChannels:
         pheromone = np.zeros((13, 13, 3), dtype=np.float32)
         with pytest.raises(ValueError, match="Spatial dimensions must match"):
             append_pheromone_channels(local_map, pheromone)
+
+
+class TestBuildAugmentedObservation:
+    """Tests for opt-in augmented observation construction."""
+
+    def test_adds_pheromone_map_without_changing_local_map(self):
+        local_map = np.zeros((11, 11, 11), dtype=np.float32)
+        observation = {
+            "local_map": local_map,
+            "self_state": np.zeros((20,), dtype=np.float32),
+        }
+        workspace = BattlefieldWorkspace(map_size=32)
+        workspace.add_annotation(BattlefieldAnnotation(
+            position=(16, 16),
+            tags={"dangerous"},
+            intensity=0.75,
+        ))
+
+        augmented = build_augmented_observation(
+            observation,
+            workspace,
+            agent_position=(16, 16),
+        )
+
+        assert augmented is not observation
+        assert augmented["local_map"] is local_map
+        assert "local_map_with_pheromones" not in observation
+        assert augmented["local_map"].shape == (11, 11, 11)
+        assert augmented["local_map_with_pheromones"].shape == (11, 11, 14)
+        assert augmented["local_map_with_pheromones"][5, 5, 11] == 0.75
+
+    def test_raises_when_local_map_missing(self):
+        workspace = BattlefieldWorkspace(map_size=32)
+
+        with pytest.raises(KeyError, match="local_map"):
+            build_augmented_observation({}, workspace, agent_position=(0, 0))

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 
@@ -118,6 +119,52 @@ class BattlefieldWorkspace:
             event: The event to record.
         """
         self._events.append(event)
+
+    def snapshot_annotations(self) -> list[BattlefieldAnnotation]:
+        """Return independent copies of active annotations."""
+        return [
+            BattlefieldAnnotation(
+                position=ann.position,
+                tags=set(ann.tags),
+                intensity=ann.intensity,
+                decay_rate=ann.decay_rate,
+                created_at=ann.created_at,
+                last_decay_tick=ann.last_decay_tick,
+            )
+            for ann in self._annotations
+        ]
+
+    def export_annotations(self) -> list[dict[str, Any]]:
+        """Export active annotations into JSON-friendly rows."""
+        return [
+            {
+                "position": ann.position,
+                "tags": sorted(ann.tags),
+                "intensity": ann.intensity,
+                "decay_rate": ann.decay_rate,
+                "created_at": ann.created_at,
+                "last_decay_tick": ann.last_decay_tick,
+            }
+            for ann in self._annotations
+        ]
+
+    def import_annotations(self, rows: list[dict[str, Any]]) -> None:
+        """Append annotations from exported rows.
+
+        Args:
+            rows: Rows produced by export_annotations or compatible dictionaries.
+        """
+        for row in rows:
+            position = row.get("position", (0, 0))
+            x, y = position
+            self.add_annotation(BattlefieldAnnotation(
+                position=(int(x), int(y)),
+                tags=set(row.get("tags", ())),
+                intensity=float(row.get("intensity", 1.0)),
+                decay_rate=float(row.get("decay_rate", 0.05)),
+                created_at=int(row.get("created_at", 0)),
+                last_decay_tick=int(row.get("last_decay_tick", 0)),
+            ))
 
     def to_observation_layer(self, num_channels: int = 3) -> np.ndarray:
         """Generate a spatial observation layer from current annotations.
