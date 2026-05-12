@@ -21,6 +21,7 @@ class TestBattlefieldAnnotation:
         assert ann.intensity == 1.0
         assert ann.decay_rate == 0.05
         assert ann.created_at == 0
+        assert ann.last_decay_tick == 0
 
 
 class TestGameEvent:
@@ -87,6 +88,41 @@ class TestBattlefieldWorkspace:
         assert ws.annotation_count == 1
         ann = ws.query_annotations(position=(5, 5), radius=0)[0]
         assert abs(ann.intensity - 1.5) < 1e-6
+
+    def test_decay_annotations_uses_delta_since_last_decay(self):
+        ws = BattlefieldWorkspace(map_size=32)
+        ws.add_annotation(BattlefieldAnnotation(
+            position=(5, 5), tags={"danger"}, intensity=2.0, decay_rate=0.1, created_at=0
+        ))
+
+        ws.decay_annotations(current_tick=10)
+        ws.decay_annotations(current_tick=11)
+
+        assert ws.annotation_count == 1
+        ann = ws.query_annotations(position=(5, 5), radius=0)[0]
+        assert abs(ann.intensity - 0.9) < 1e-6
+
+    def test_decay_annotations_ignores_negative_delta(self):
+        ws = BattlefieldWorkspace(map_size=32)
+        ws.add_annotation(BattlefieldAnnotation(
+            position=(5, 5), tags={"danger"}, intensity=2.0, decay_rate=0.1, created_at=0
+        ))
+
+        ws.decay_annotations(current_tick=10)
+        ws.decay_annotations(current_tick=9)
+
+        ann = ws.query_annotations(position=(5, 5), radius=0)[0]
+        assert abs(ann.intensity - 1.0) < 1e-6
+
+    def test_decay_annotations_removes_after_delta_decay(self):
+        ws = BattlefieldWorkspace(map_size=32)
+        ws.add_annotation(BattlefieldAnnotation(
+            position=(5, 5), tags={"danger"}, intensity=0.2, decay_rate=0.1, created_at=0
+        ))
+
+        ws.decay_annotations(current_tick=2)
+
+        assert ws.annotation_count == 0
 
     def test_record_event(self):
         ws = BattlefieldWorkspace(map_size=32)

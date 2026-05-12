@@ -8,9 +8,9 @@
     "label": "9 / 9 steps"
   },
   "last_run": {
-    "at": "2026-05-10T12:00:00",
+    "at": "2026-05-12T18:30:24+08:00",
     "agent": "local-execution-agent",
-    "summary": "Parallel AgentBench skill runtime and RL/MOBA tactical runtime L0/L1 prototypes implemented, merged, and validated."
+    "summary": "Fixed Review findings: executable AgentBench sample controllers, API validation recorded, RL/MOBA decay and team perspective corrected."
   },
   "validation": {
     "status": "PASS",
@@ -18,13 +18,14 @@
       "python -m json.tool .ai/ledger.json",
       "python -m hybrid_arena.scripts.skill_runtime_demo --root . --db .skills/state.db --once",
       "python -m compileall hybrid_arena",
+      "pytest hybrid_arena/services/api -v",
       "pytest hybrid_arena/skill_runtime/tests -v",
       "pytest hybrid_arena/minimoba/tactical_runtime/tests -v",
-      "pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/scripts/tests -v",
+      "pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/services/api hybrid_arena/scripts/tests -v",
       "pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v",
       "ruff check hybrid_arena"
     ],
-    "summary": "All validations pass. 49 skill_runtime tests, 57 tactical_runtime tests, 34 AgentBench regression tests, 96 MiniMOBA/RL regression tests. Ruff clean. Compileall clean."
+    "summary": "All validations pass. API tests 3 passed. Skill runtime tests 54 passed. Tactical runtime tests 63 passed. AgentBench regression tests 37 passed. MiniMOBA/RL regression tests 96 passed, 1 skipped. Demo, compileall, JSON validation, and ruff all passed."
   },
   "open_items": [],
   "checkpoint_id": "checkpoint-v0",

@@ -9,7 +9,7 @@ import pytest
 from hybrid_arena.skill_runtime.body_schema import BodySchema
 from hybrid_arena.skill_runtime.dispatcher import DispatchResult, ReflexDispatcher
 from hybrid_arena.skill_runtime.sample_skills import create_sample_skills
-from hybrid_arena.skill_runtime.schema import Skill, WorkspaceEvent
+from hybrid_arena.skill_runtime.schema import Effect, Skill, Trigger, TypedSignature, WorkspaceEvent
 from hybrid_arena.skill_runtime.workspace import Workspace
 
 
@@ -53,9 +53,23 @@ class TestTriggerMatching:
         assert result.escalated is True
 
     def test_regex_matches_rename_event(
-        self, dispatcher: ReflexDispatcher
+        self, dispatcher: ReflexDispatcher, ws: Workspace
     ) -> None:
-        event = WorkspaceEvent(kind="file_rename", path="rename_utils")
+        fixture_path = ws.root / "tests" / "test_imports.py"
+        fixture_path.parent.mkdir(parents=True)
+        fixture_path.write_text(
+            "from src.old_module import build\n",
+            encoding="utf-8",
+        )
+        event = WorkspaceEvent(
+            kind="file_rename",
+            path="rename_utils",
+            payload={
+                "old_name": "src.old_module",
+                "new_name": "src.new_module",
+                "paths": ["tests/test_imports.py"],
+            },
+        )
         result = dispatcher.dispatch(event)
         assert result.skill_id == "update_imports_after_rename"
         assert result.success is True
@@ -125,6 +139,31 @@ class TestTraceRecording:
         dispatcher.dispatch(event)
         traces = ws.get_traces()
         assert traces[0]["skill_id"] == "format_on_save"
+
+    def test_unknown_controller_records_failure(self, ws: Workspace) -> None:
+        skill = Skill(
+            id="unknown_controller_skill",
+            name="Unknown Controller Skill",
+            triggers=(Trigger(kind="glob", spec="*.py"),),
+            signature=TypedSignature(
+                input_type="file_path",
+                output_type="annotation_update",
+                effects=frozenset({Effect.WRITE_FS}),
+            ),
+            controller="missing_controller",
+        )
+        body = BodySchema(skills=[skill], workspace=ws)
+        dispatcher = ReflexDispatcher(body=body, workspace=ws)
+
+        result = dispatcher.dispatch(WorkspaceEvent(kind="file_save", path="app.py"))
+
+        assert result.skill_id == "unknown_controller_skill"
+        assert result.success is False
+        assert result.residual == 1.0
+        assert "Unknown controller" in result.message
+        traces = ws.get_traces(skill_id="unknown_controller_skill")
+        assert traces[0]["success"] is False
+        assert traces[0]["output_snapshot"]["error"] == "Unknown controller"
 
 
 class TestBodySchemaSummary:
