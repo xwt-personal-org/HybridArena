@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from hybrid_arena.minimoba.tactical_runtime.workspace import BattlefieldWorkspace
+
 
 def crop_pheromone_layer(
     workspace_layer: np.ndarray,
@@ -83,3 +85,30 @@ def append_pheromone_channels(
             f"vs pheromone_crop {pheromone_crop.shape[:2]}"
         )
     return np.concatenate([local_map, pheromone_crop], axis=2)
+
+
+def build_augmented_observation(
+    observation: dict,
+    workspace: BattlefieldWorkspace,
+    agent_position: tuple[int, int],
+    view_size: int = 11,
+) -> dict:
+    """Return an opt-in observation copy with appended pheromone channels.
+
+    The original ``local_map`` entry is kept unchanged. The new
+    ``local_map_with_pheromones`` entry appends the workspace's three annotation
+    channels to the original local map.
+    """
+    local_map = observation["local_map"]
+    workspace_layer = workspace.to_observation_layer(num_channels=3)
+    pheromone_crop = crop_pheromone_layer(
+        workspace_layer=workspace_layer,
+        center=agent_position,
+        view_size=view_size,
+    )
+    augmented = dict(observation)
+    augmented["local_map_with_pheromones"] = append_pheromone_channels(
+        local_map,
+        pheromone_crop,
+    )
+    return augmented
