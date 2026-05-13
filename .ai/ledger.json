@@ -1,34 +1,37 @@
 {
   "schema_version": "wkstruc-ledger/v9",
-  "task_id": "iter-parallel-skill-runtime-20260510",
+  "task_id": "iter-agent-architecture-l2-lite-20260512",
   "state": "NEEDS_REVIEW",
   "progress": {
-    "done": 9,
-    "total": 9,
-    "label": "9 / 9 steps"
+    "done": 13,
+    "total": 13,
+    "label": "13 / 13 steps"
   },
   "last_run": {
-    "at": "2026-05-12T18:30:24+08:00",
+    "at": "2026-05-13T10:10:22+08:00",
     "agent": "local-execution-agent",
-    "summary": "Fixed Review findings: executable AgentBench sample controllers, API validation recorded, RL/MOBA decay and team perspective corrected."
+    "summary": "Completed HybridArena agent-architecture L2-lite parallel patch; waiting for Web Review."
   },
   "validation": {
     "status": "PASS",
     "commands": [
       "python -m json.tool .ai/ledger.json",
-      "python -m hybrid_arena.scripts.skill_runtime_demo --root . --db .skills/state.db --once",
       "python -m compileall hybrid_arena",
-      "pytest hybrid_arena/services/api -v",
       "pytest hybrid_arena/skill_runtime/tests -v",
+      "pytest hybrid_arena/services/api/tests -v",
+      "python -m hybrid_arena.scripts.skill_runtime_demo --root . --db .skills/state.db --once --list-tools",
+      "python -m hybrid_arena.scripts.skill_runtime_demo --root . --db .skills/state.db --once --explain-affordances",
       "pytest hybrid_arena/minimoba/tactical_runtime/tests -v",
-      "pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/services/api hybrid_arena/scripts/tests -v",
       "pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v",
+      "pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/services/api hybrid_arena/scripts/tests -v",
       "ruff check hybrid_arena"
     ],
-    "summary": "All validations pass. API tests 3 passed. Skill runtime tests 54 passed. Tactical runtime tests 63 passed. AgentBench regression tests 37 passed. MiniMOBA/RL regression tests 96 passed, 1 skipped. Demo, compileall, JSON validation, and ruff all passed."
+    "summary": "All validations pass. JSON validation and compileall passed. Skill runtime tests 76 passed. API tests 6 passed. Skill runtime demo list-tools and explain-affordances passed. Tactical runtime tests 85 passed. MiniMOBA/training/algorithms regression tests 96 passed, 1 skipped. AgentBench/core/scenarios/API/scripts regression tests 40 passed. Ruff passed."
   },
   "open_items": [],
-  "checkpoint_id": "checkpoint-v0",
+  "checkpoint_id": "checkpoint-agent-architecture-l2-lite-20260513",
   "last_review_report": null,
-  "consumed_inbox": []
+  "consumed_inbox": [
+    ".ai/inbox/plan.md"
+  ]
 }
