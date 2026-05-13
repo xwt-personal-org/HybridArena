@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 import json
 import sqlite3
 import time
@@ -149,42 +150,82 @@ class Workspace:
     def query_paths(
         self,
         *,
+        path_glob: str | None = None,
         tags_superset: set[str] | None = None,
         status: str | None = None,
         any_tag: str | None = None,
     ) -> list[str]:
         """Return paths whose annotations match the given predicate.
 
-        Only one of the predicates is applied (priority: *tags_superset*,
-        *status*, *any_tag*).
+        When multiple predicates are supplied, paths must match all of them.
+        Calling without predicates preserves the L0 behavior and returns an
+        empty list.
 
         Args:
+            path_glob: Path must match this glob pattern.
             tags_superset: Path must have **all** of these tags.
             status: Path must have this exact status.
             any_tag: Path must contain this tag.
         """
+        if (
+            path_glob is None
+            and tags_superset is None
+            and status is None
+            and any_tag is None
+        ):
+            return []
+
         with self._connect() as conn:
-            if tags_superset is not None:
-                rows = conn.execute(
-                    "SELECT path, tags FROM annotations"
-                ).fetchall()
-                return [
-                    r[0]
-                    for r in rows
-                    if tags_superset.issubset(set(json.loads(r[1])))
-                ]
-            if status is not None:
-                rows = conn.execute(
-                    "SELECT path FROM annotations WHERE status = ?",
-                    (status,),
-                ).fetchall()
-                return [r[0] for r in rows]
-            if any_tag is not None:
-                rows = conn.execute(
-                    "SELECT path, tags FROM annotations"
-                ).fetchall()
-                return [r[0] for r in rows if any_tag in json.loads(r[1])]
-        return []
+            rows = conn.execute(
+                "SELECT path, tags, status FROM annotations"
+            ).fetchall()
+
+        result: list[str] = []
+        required_tags = tags_superset or set()
+        for path, tags_raw, row_status in rows:
+            tags = set(json.loads(tags_raw))
+            if path_glob is not None and not fnmatch.fnmatch(path, path_glob):
+                continue
+            if required_tags and not required_tags.issubset(tags):
+                continue
+            if status is not None and row_status != status:
+                continue
+            if any_tag is not None and any_tag not in tags:
+                continue
+            result.append(path)
+        return result
+
+    def snapshot_annotations(self) -> list[Annotation]:
+        """Return all annotations in deterministic path order."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT path, tags, status, last_skill, decay_at, lineage
+                FROM annotations
+                ORDER BY path
+                """
+            ).fetchall()
+        return [
+            Annotation(
+                path=row[0],
+                tags=frozenset(json.loads(row[1])),
+                status=row[2],
+                last_skill=row[3],
+                decay_at=row[4],
+                lineage=tuple(json.loads(row[5])),
+            )
+            for row in rows
+        ]
+
+    def prune_expired_annotations(self, now: float | None = None) -> int:
+        """Delete annotations whose ``decay_at`` timestamp has elapsed."""
+        current = time.time() if now is None else now
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "DELETE FROM annotations WHERE decay_at > 0.0 AND decay_at <= ?",
+                (current,),
+            )
+            return cursor.rowcount
 
     # ------------------------------------------------------------------
     # Events

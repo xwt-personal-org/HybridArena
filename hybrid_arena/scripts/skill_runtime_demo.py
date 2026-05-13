@@ -8,13 +8,31 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from hybrid_arena.skill_runtime.body_schema import BodySchema
 from hybrid_arena.skill_runtime.dispatcher import ReflexDispatcher
+from hybrid_arena.skill_runtime.protocol import EnvelopeKind, SkillRuntimeMessage
 from hybrid_arena.skill_runtime.sample_skills import create_sample_skills
 from hybrid_arena.skill_runtime.schema import WorkspaceEvent
+from hybrid_arena.skill_runtime.tool_registry import ToolRegistry
 from hybrid_arena.skill_runtime.workspace import Workspace
+
+
+def _load_event(path: Path | None) -> WorkspaceEvent:
+    if path is None:
+        return WorkspaceEvent(kind="file_save", path="hybrid_arena/core/utils.py")
+
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if raw.get("version") or (raw.get("kind") == EnvelopeKind.EVENT.value and "payload" in raw):
+        return SkillRuntimeMessage.from_dict(raw).to_workspace_event()
+    return WorkspaceEvent(
+        kind=str(raw["kind"]),
+        path=str(raw.get("path", "")),
+        payload=dict(raw.get("payload", {})),
+        created_at=float(raw.get("created_at", 0.0)),
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -37,6 +55,21 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Run exactly one synthetic dispatch and exit.",
     )
+    parser.add_argument(
+        "--list-tools",
+        action="store_true",
+        help="List deterministic built-in controller descriptors as JSON.",
+    )
+    parser.add_argument(
+        "--explain-affordances",
+        action="store_true",
+        help="Print body-schema affordance diagnostics as JSON.",
+    )
+    parser.add_argument(
+        "--event-json",
+        type=Path,
+        help="Path to a JSON WorkspaceEvent or event envelope.",
+    )
     args = parser.parse_args(argv)
 
     root = Path(args.root).resolve()
@@ -49,9 +82,28 @@ def main(argv: list[str] | None = None) -> int:
     skills = create_sample_skills(workspace)
     body = BodySchema(skills=skills, workspace=workspace)
     dispatcher = ReflexDispatcher(body=body, workspace=workspace)
+    event = _load_event(args.event_json)
 
-    # Synthetic event: a Python file was saved.
-    event = WorkspaceEvent(kind="file_save", path="hybrid_arena/core/utils.py")
+    if args.list_tools:
+        registry = ToolRegistry.discover_builtin_controllers()
+        print(
+            json.dumps(
+                {"tools": [tool.to_dict() for tool in registry.list()]},
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+        )
+        return 0
+
+    if args.explain_affordances:
+        print(
+            json.dumps(
+                body.explain_affordances(event=event),
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+        )
+        return 0
 
     result = dispatcher.dispatch(event)
 

@@ -55,3 +55,55 @@ def test_run_task_rejects_unknown_scenario(tmp_path) -> None:
     )
 
     assert response.status_code == 404
+
+
+def test_skill_runtime_tools_endpoint(tmp_path) -> None:
+    app = create_app(
+        AgentBenchStore(tmp_path / "agentbench.db"),
+        skill_runtime_db_path=tmp_path / "skill_runtime.db",
+    )
+    client = TestClient(app)
+
+    response = client.get("/skill-runtime/tools")
+
+    assert response.status_code == 200
+    assert any(
+        item["name"] == "mock_annotate_formatted"
+        for item in response.json()["tools"]
+    )
+
+
+def test_skill_runtime_advice_endpoint_reports_empty_workspace(tmp_path) -> None:
+    app = create_app(
+        AgentBenchStore(tmp_path / "agentbench.db"),
+        skill_runtime_db_path=tmp_path / "skill_runtime.db",
+    )
+    client = TestClient(app)
+
+    response = client.get("/skill-runtime/advice")
+
+    assert response.status_code == 200
+    assert any(
+        item["kind"] == "empty_workspace"
+        for item in response.json()["advisories"]
+    )
+
+
+def test_skill_runtime_dispatch_endpoint_runs_deterministic_skill(tmp_path) -> None:
+    app = create_app(
+        AgentBenchStore(tmp_path / "agentbench.db"),
+        skill_runtime_db_path=tmp_path / "skill_runtime.db",
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/skill-runtime/dispatch",
+        json={"kind": "file_save", "path": "src/app.py", "payload": {}},
+    )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["result"]["skill_id"] == "format_on_save"
+    assert body["result"]["success"] is True
+    assert body["trace_count"] == 1
