@@ -24,7 +24,8 @@ class TestTacticalMemoryStore:
             reward_delta=1.25,
             tick=7,
             tags=("resource", "lane"),
-            metadata={"target": [4, 7]},
+            state_summary={"target": [4, 7]},
+            action={"move": 1, "skill": 0, "target": 0},
         ))
 
         records = store.query(episode_id="ep-1", agent_id="red_0", skill_id="farm_resources")
@@ -37,8 +38,9 @@ class TestTacticalMemoryStore:
         assert record.success is True
         assert record.reward_delta == 1.25
         assert record.tick == 7
-        assert record.tags == ("resource", "lane")
-        assert record.metadata == {"target": [4, 7]}
+        assert record.tags == frozenset({"resource", "lane"})
+        assert record.state_summary == {"target": [4, 7]}
+        assert record.action == {"move": 1, "skill": 0, "target": 0}
         store.close()
 
     def test_query_filters_by_success_and_limit(self, tmp_path):
@@ -58,6 +60,23 @@ class TestTacticalMemoryStore:
         assert len(records) == 1
         assert records[0].success is True
         assert records[0].tick == 2
+        store.close()
+
+    def test_query_filters_by_tags_superset(self, tmp_path):
+        store = TacticalMemoryStore(tmp_path / "memory.sqlite3")
+        store.record(TacticalMemoryRecord(
+            episode_id="ep-1",
+            agent_id="red_0",
+            skill_id="farm_resources",
+            success=True,
+            reward_delta=1.0,
+            tags=frozenset({"resource", "lane"}),
+        ))
+
+        records = store.query(tags_superset={"resource"})
+
+        assert len(records) == 1
+        assert records[0].skill_id == "farm_resources"
         store.close()
 
     def test_summarize_skill_outcomes(self, tmp_path):
@@ -111,4 +130,3 @@ class TestTacticalMemoryStore:
 
         assert "idx_tactical_memory_episode_agent_skill" in indexes
         assert "idx_tactical_memory_skill_success" in indexes
-

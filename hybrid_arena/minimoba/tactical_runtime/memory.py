@@ -4,25 +4,59 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 
-@dataclass
+@dataclass(init=False)
 class TacticalMemoryRecord:
     """A single tactical skill outcome observed during an episode."""
 
     episode_id: str
+    tick: int
     agent_id: str
     skill_id: str
-    success: bool
+    state_summary: dict[str, Any]
+    action: dict[str, int]
     reward_delta: float
-    tick: int = 0
-    tags: tuple[str, ...] = ()
-    metadata: dict[str, Any] = field(default_factory=dict)
-    created_at: str = ""
-    record_id: int | None = None
+    success: bool
+    tags: frozenset[str]
+    created_at: str
+    record_id: int | None
+
+    def __init__(
+        self,
+        *,
+        episode_id: str,
+        agent_id: str,
+        skill_id: str,
+        reward_delta: float,
+        success: bool,
+        tick: int = 0,
+        state_summary: dict[str, Any] | None = None,
+        action: dict[str, int] | None = None,
+        tags: frozenset[str] | tuple[str, ...] | set[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        created_at: str = "",
+        record_id: int | None = None,
+    ) -> None:
+        self.episode_id = episode_id
+        self.tick = tick
+        self.agent_id = agent_id
+        self.skill_id = skill_id
+        self.state_summary = dict(state_summary if state_summary is not None else metadata or {})
+        self.action = dict(action or {})
+        self.reward_delta = float(reward_delta)
+        self.success = bool(success)
+        self.tags = frozenset(tags or frozenset())
+        self.created_at = created_at
+        self.record_id = record_id
+
+    @property
+    def metadata(self) -> dict[str, Any]:
+        """Compatibility alias for ``state_summary``."""
+        return self.state_summary
 
 
 class TacticalMemoryStore:
@@ -40,13 +74,14 @@ class TacticalMemoryStore:
             CREATE TABLE IF NOT EXISTS tactical_memory (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 episode_id TEXT NOT NULL,
+                tick INTEGER NOT NULL DEFAULT 0,
                 agent_id TEXT NOT NULL,
                 skill_id TEXT NOT NULL,
-                success INTEGER NOT NULL,
+                state_summary_json TEXT NOT NULL DEFAULT '{}',
+                action_json TEXT NOT NULL DEFAULT '{}',
                 reward_delta REAL NOT NULL,
-                tick INTEGER NOT NULL DEFAULT 0,
+                success INTEGER NOT NULL,
                 tags_json TEXT NOT NULL DEFAULT '[]',
-                metadata_json TEXT NOT NULL DEFAULT '{}',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
             """
@@ -71,25 +106,27 @@ class TacticalMemoryStore:
             """
             INSERT INTO tactical_memory (
                 episode_id,
+                tick,
                 agent_id,
                 skill_id,
-                success,
+                state_summary_json,
+                action_json,
                 reward_delta,
-                tick,
-                tags_json,
-                metadata_json
+                success,
+                tags_json
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 record.episode_id,
+                int(record.tick),
                 record.agent_id,
                 record.skill_id,
-                1 if record.success else 0,
+                json.dumps(record.state_summary, ensure_ascii=False, sort_keys=True),
+                json.dumps(record.action, ensure_ascii=False, sort_keys=True),
                 float(record.reward_delta),
-                int(record.tick),
-                json.dumps(list(record.tags), ensure_ascii=False),
-                json.dumps(record.metadata, ensure_ascii=False, sort_keys=True),
+                1 if record.success else 0,
+                json.dumps(sorted(record.tags), ensure_ascii=False),
             ),
         )
         self._conn.commit()
@@ -100,8 +137,10 @@ class TacticalMemoryStore:
         episode_id: str | None = None,
         agent_id: str | None = None,
         skill_id: str | None = None,
-        success: bool | None = None,
+        tags_superset: set[str] | frozenset[str] | None = None,
         limit: int | None = 100,
+        *,
+        success: bool | None = None,
     ) -> list[TacticalMemoryRecord]:
         """Query tactical memory records with optional filters."""
         clauses: list[str] = []
@@ -127,8 +166,12 @@ class TacticalMemoryStore:
             sql += " LIMIT ?"
             params.append(int(limit))
 
+        required_tags = set(tags_superset or set())
         rows = self._conn.execute(sql, params).fetchall()
-        return [self._row_to_record(row) for row in rows]
+        records = [self._row_to_record(row) for row in rows]
+        if required_tags:
+            records = [record for record in records if required_tags.issubset(record.tags)]
+        return records
 
     def summarize_skill_outcomes(self) -> dict[str, dict[str, float | int]]:
         """Aggregate attempts, success rate, and mean reward delta by skill."""
@@ -168,13 +211,14 @@ class TacticalMemoryStore:
     def _row_to_record(self, row: sqlite3.Row) -> TacticalMemoryRecord:
         return TacticalMemoryRecord(
             episode_id=str(row["episode_id"]),
+            tick=int(row["tick"]),
             agent_id=str(row["agent_id"]),
             skill_id=str(row["skill_id"]),
-            success=bool(row["success"]),
+            state_summary=dict(json.loads(row["state_summary_json"])),
+            action=dict(json.loads(row["action_json"])),
             reward_delta=float(row["reward_delta"]),
-            tick=int(row["tick"]),
-            tags=tuple(json.loads(row["tags_json"])),
-            metadata=dict(json.loads(row["metadata_json"])),
+            success=bool(row["success"]),
+            tags=frozenset(json.loads(row["tags_json"])),
             created_at=str(row["created_at"]),
             record_id=int(row["id"]),
         )
@@ -184,4 +228,3 @@ class TacticalMemoryStore:
 
     def __exit__(self, exc_type, exc, tb) -> None:
         self.close()
-

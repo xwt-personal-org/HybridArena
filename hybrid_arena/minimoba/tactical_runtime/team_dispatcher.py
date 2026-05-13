@@ -9,6 +9,8 @@ from hybrid_arena.minimoba.tactical_runtime.dispatcher import (
     TacticalDispatcher,
     TacticalDispatchResult,
 )
+from hybrid_arena.minimoba.tactical_runtime.memory import TacticalMemoryStore
+from hybrid_arena.minimoba.tactical_runtime.schema import GameSkill
 from hybrid_arena.minimoba.tactical_runtime.skills import nearest_tagged_region
 from hybrid_arena.minimoba.tactical_runtime.workspace import BattlefieldWorkspace, GameEvent
 
@@ -17,11 +19,13 @@ FALLBACK_PATROL_ACTION = {"move": 0, "skill": 0, "target": 0}
 
 @dataclass
 class TeamDispatchResult:
-    """Actions, per-agent dispatch results, and conflict diagnostics."""
+    """Actions, selected skills, conflicts, and trace diagnostics."""
 
     actions: dict[str, dict[str, int]]
-    agent_results: dict[str, TacticalDispatchResult]
-    conflicts: list[dict] = field(default_factory=list)
+    selected_skills: dict[str, str | None]
+    conflicts: list[dict[str, object]] = field(default_factory=list)
+    trace: list[dict[str, object]] = field(default_factory=list)
+    agent_results: dict[str, TacticalDispatchResult] = field(default_factory=dict)
 
 
 class TeamTacticalDispatcher:
@@ -29,44 +33,67 @@ class TeamTacticalDispatcher:
 
     def __init__(
         self,
-        body: GameBodySchema,
-        workspace: BattlefieldWorkspace,
+        skills: list[GameSkill] | None = None,
+        workspace: BattlefieldWorkspace | None = None,
         fallback_planner: object = None,
+        memory: TacticalMemoryStore | None = None,
+        *,
+        body: GameBodySchema | None = None,
     ) -> None:
-        self.body = body
+        if workspace is None and body is not None:
+            workspace = body.workspace
+        if workspace is None:
+            raise ValueError("workspace is required")
         self.workspace = workspace
+        self.memory = memory
+        self.body = body or GameBodySchema(skills=skills or [], workspace=workspace)
         self.dispatcher = TacticalDispatcher(
-            body=body,
+            body=self.body,
             workspace=workspace,
             fallback_planner=fallback_planner,
         )
 
     def dispatch_team(
         self,
-        events: dict[str, GameEvent],
+        events_by_agent: dict[str, GameEvent] | None = None,
         game_state: object = None,
         agent_ids: list[str] | tuple[str, ...] | None = None,
+        *,
+        events: dict[str, GameEvent] | None = None,
     ) -> TeamDispatchResult:
         """Dispatch all requested agents and resolve shared target conflicts."""
-        ordered_agents = list(agent_ids) if agent_ids is not None else sorted(events)
+        events_map = events_by_agent if events_by_agent is not None else events or {}
+        ordered_agents = list(agent_ids) if agent_ids is not None else sorted(events_map)
         agent_results: dict[str, TacticalDispatchResult] = {}
         actions: dict[str, dict[str, int]] = {}
+        selected_skills: dict[str, str | None] = {}
         selected_targets: dict[str, tuple[int, int]] = {}
+        trace: list[dict[str, object]] = []
 
         for agent_id in ordered_agents:
-            event = events.get(agent_id, GameEvent(kind="tick", agent_id=agent_id))
+            event = events_map.get(agent_id, GameEvent(kind="tick", agent_id=agent_id))
             result = self.dispatcher.dispatch(event, game_state=game_state, agent_id=agent_id)
             agent_results[agent_id] = result
             actions[agent_id] = self._normalize_action(result.action)
+            selected_skills[agent_id] = result.skill_id
             target = self._selected_objective_or_resource(result, game_state, agent_id)
             if target is not None:
                 selected_targets[agent_id] = target
+            trace.append({
+                "agent_id": agent_id,
+                "event_kind": event.kind,
+                "skill_id": result.skill_id,
+                "action": dict(actions[agent_id]),
+                "target": target,
+            })
 
         conflicts = self._resolve_conflicts(actions, selected_targets, game_state)
         return TeamDispatchResult(
             actions=actions,
-            agent_results=agent_results,
+            selected_skills=selected_skills,
             conflicts=conflicts,
+            trace=trace,
+            agent_results=agent_results,
         )
 
     def _resolve_conflicts(
@@ -74,12 +101,12 @@ class TeamTacticalDispatcher:
         actions: dict[str, dict[str, int]],
         selected_targets: dict[str, tuple[int, int]],
         game_state: object,
-    ) -> list[dict]:
+    ) -> list[dict[str, object]]:
         by_target: dict[tuple[int, int], list[str]] = {}
         for agent_id, target in selected_targets.items():
             by_target.setdefault(target, []).append(agent_id)
 
-        conflicts: list[dict] = []
+        conflicts: list[dict[str, object]] = []
         for target in sorted(by_target):
             agents = sorted(by_target[target])
             if len(agents) <= 1:
@@ -142,4 +169,3 @@ class TeamTacticalDispatcher:
             "skill": int(action.get("skill", 0)),
             "target": int(action.get("target", 0)),
         }
-

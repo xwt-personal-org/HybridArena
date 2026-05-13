@@ -1,54 +1,30 @@
-# RL/MOBA L2-lite 战术能力实现摘要
+# RL/MOBA Tactical Architecture L2-lite Summary
 
-## 已实现文件
+## 实现文件
 
-- `hybrid_arena/minimoba/tactical_runtime/memory.py`
-  - 新增 `TacticalMemoryRecord` 与 sqlite3 `TacticalMemoryStore`。
-  - 支持 `record`、`query`、`summarize_skill_outcomes`、`close`。
-  - 创建索引 `(episode_id, agent_id, skill_id)` 与 `(skill_id, success)`。
-- `hybrid_arena/minimoba/tactical_runtime/workspace.py`
-  - 新增 `snapshot_annotations()`、`export_annotations()`、`import_annotations(rows)`。
-  - 保留原有 annotation 查询、衰减、事件记录和 observation layer 行为。
-- `hybrid_arena/minimoba/tactical_runtime/team_dispatcher.py`
-  - 新增 `TeamDispatchResult` 与 `TeamTacticalDispatcher`。
-  - 内部复用现有 `TacticalDispatcher`。
-  - 对 objective/resource 坐标冲突做确定性处理：保留距离最近 agent，平局按 agent id；其他 agent 改为巡逻 fallback `{move: 0, skill: 0, target: 0}`。
-- `hybrid_arena/minimoba/tactical_runtime/skill_stats.py`
-  - 新增 `SkillOutcomeStats`、`update_stats`、`apply_stats_to_skill`。
-  - 仅调整 skill prior 与 no-go traces，不做梯度训练。
-  - prior clamp 到 `[0.05, 0.95]`，保留 skill 的 id/name/triggers/controller/provenance 等元数据。
-- `hybrid_arena/minimoba/tactical_runtime/observation.py`
-  - 新增 `build_augmented_observation(...)`。
-  - 原 `local_map` 不变，新增 `local_map_with_pheromones`；默认 `local_map` 为 `(11, 11, 11)` 时增强后为 `(11, 11, 14)`。
-- `hybrid_arena/minimoba/tactical_runtime/wrappers.py`
-  - 新增 opt-in `PheromoneObservationAdapter`。
-  - 未修改 `MiniMOBAEnv.observation_space()` 默认 contract。
-- `hybrid_arena/minimoba/tactical_runtime/tactical_graph.py`
-  - 新增轻量 dataclass `TacticalRelation`。
-  - 支持 `annotations_to_relations`、`memory_to_relations`、`query_relations`。
-- `hybrid_arena/minimoba/tactical_runtime/tests/`
-  - 新增 memory、team dispatcher、skill stats、tactical graph、adapter 测试。
-  - 扩展 workspace 与 observation 测试覆盖新接口。
+- `hybrid_arena/minimoba/tactical_runtime/memory.py`：SQLite `TacticalMemoryStore`，按 episode 记录 `TacticalMemoryRecord`，包含 state summary、action、reward delta、success 和 tags，不进入每 tick 默认热路径。
+- `hybrid_arena/minimoba/tactical_runtime/workspace.py`：新增 annotation snapshot/export/import，保留原有空间查询、衰减、observation layer 行为。
+- `hybrid_arena/minimoba/tactical_runtime/team_dispatcher.py`：新增 `TeamTacticalDispatcher` 和 deterministic conflict resolver，内部复用单 Agent `TacticalDispatcher`。
+- `hybrid_arena/minimoba/tactical_runtime/skill_stats.py`：新增 reward_delta/success 驱动的 prior 与 no-go traces 更新，不引入 torch 训练。
+- `hybrid_arena/minimoba/tactical_runtime/observation.py` 与 `wrappers.py`：新增 opt-in `local_map_with_pheromones` adapter，默认 `local_map` 仍为 `(11, 11, 11)`。
+- `hybrid_arena/minimoba/tactical_runtime/tactical_graph.py`：新增轻量 `TacticalRelation` 投影和查询，不引入 graph DB。
+- `hybrid_arena/minimoba/tactical_runtime/tests/`：覆盖 memory、team dispatcher、skill stats、observation adapter、relation export 和 workspace 扩展。
 
-## 验证结果
+## 验证
 
-- `pytest hybrid_arena/minimoba/tactical_runtime/tests -v`
-  - 84 passed
-- `pytest hybrid_arena/minimoba/tests -v`
-  - 60 passed, 1 skipped
-- `ruff check hybrid_arena/minimoba/tactical_runtime hybrid_arena/minimoba`
-  - All checks passed
+- `pytest hybrid_arena/minimoba/tactical_runtime/tests -v`：85 passed。
+- `pytest hybrid_arena/minimoba/tests -v`：60 passed, 1 skipped。
+- `ruff check hybrid_arena/minimoba/tactical_runtime hybrid_arena/minimoba`：All checks passed。
 
 ## 限制
 
-- Tactical memory 仍是 episode-level 存储层，没有接入每个 env tick 的默认路径。
-- `PheromoneObservationAdapter` 仅作为显式 opt-in 包装器提供，不改变 MiniMOBA 默认 observation contract。
-- Team conflict resolver 当前只识别 `farm_resources` 与 `push_objective` 对 resource/objective annotation 的坐标竞争。
-- Tactical graph 是内存 dataclass 投影，不包含持久化图数据库、复杂图查询或跨 episode 推理。
+- Tactical memory 只提供 episode-level 存储层，尚未接入 episode 结束后的批量 outcome 汇总流程。
+- Team conflict resolver 当前只处理 resource/objective 坐标竞争，策略保持 deterministic。
+- Pheromone observation 仅通过显式 wrapper 启用，不改变 `MiniMOBAEnv.observation_space()` 默认 contract。
+- Tactical graph 是 in-process dataclass 投影，不提供持久化图数据库或跨 episode 推理。
 
 ## 下一轮候选
 
-- 将 `TacticalMemoryStore` 接入 episode 结束后的批量 outcome 汇总，而不是 step 热路径。
-- 为 team dispatcher 增加更多资源类型和角色优先级策略，但保持 deterministic。
-- 在 demo 或离线评估脚本中增加 opt-in pheromone observation 示例。
-- 将 tactical relation projection 用于调试面板或离线诊断报告。
+- 将 `TacticalMemoryStore` 接入离线 evaluator 的 episode-end 汇总。
+- 为 team dispatcher 增加角色优先级和更多目标类别，但继续保持 deterministic。
+- 将 tactical relation projection 输出到 demo 或离线诊断报告。

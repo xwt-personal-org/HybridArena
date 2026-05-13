@@ -29,18 +29,18 @@ class TestTacticalGraph:
         relations = annotations_to_relations(workspace.export_annotations())
 
         assert TacticalRelation(
-            source_id="annotation:4,5",
-            target_id="tag:dangerous",
-            relation_type="has_tag",
+            src="position:4,5",
+            dst="tag:dangerous",
+            relation="has_tag",
             weight=0.8,
-            evidence={"position": (4, 5)},
+            metadata={"position": (4, 5)},
         ) in relations
         assert TacticalRelation(
-            source_id="annotation:4,5",
-            target_id="tag:objective",
-            relation_type="has_tag",
+            src="position:4,5",
+            dst="tag:objective",
+            relation="has_tag",
             weight=0.8,
-            evidence={"position": (4, 5)},
+            metadata={"position": (4, 5)},
         ) in relations
 
     def test_memory_to_relations_projects_skill_outcomes(self):
@@ -51,6 +51,7 @@ class TestTacticalGraph:
                 skill_id="farm_resources",
                 success=True,
                 reward_delta=1.5,
+                tags=frozenset({"resource_soon"}),
             ),
             TacticalMemoryRecord(
                 episode_id="ep-1",
@@ -63,25 +64,27 @@ class TestTacticalGraph:
 
         relations = memory_to_relations(records)
 
-        assert relations[0].source_id == "skill:farm_resources"
-        assert relations[0].target_id == "outcome:success"
-        assert relations[0].relation_type == "produced"
-        assert relations[0].weight == 1.5
-        assert relations[1].target_id == "outcome:failure"
+        assert relations[0].src == "agent:red_0"
+        assert relations[0].dst == "skill:farm_resources"
+        assert relations[0].relation == "used_skill"
+        produced = next(item for item in relations if item.dst == "outcome:success")
+        assert produced.relation == "produced_outcome"
+        assert produced.weight == 1.5
+        assert any(item.dst == "outcome:failure" for item in relations)
+        assert any(item.dst == "tag:resource_soon" for item in relations)
 
     def test_query_relations_filters_by_source_target_and_type(self):
         relations = [
-            TacticalRelation("skill:a", "outcome:success", "produced", 1.0),
-            TacticalRelation("skill:a", "tag:objective", "uses", 0.5),
-            TacticalRelation("skill:b", "outcome:success", "produced", 1.0),
+            TacticalRelation("skill:a", "produced", "outcome:success", 1.0),
+            TacticalRelation("skill:a", "uses", "tag:objective", 0.5),
+            TacticalRelation("skill:b", "produced", "outcome:success", 1.0),
         ]
 
         result = query_relations(
             relations,
-            source_id="skill:a",
-            target_id="outcome:success",
-            relation_type="produced",
+            src="skill:a",
+            dst="outcome:success",
+            relation="produced",
         )
 
         assert result == [relations[0]]
-

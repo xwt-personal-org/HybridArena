@@ -28,8 +28,8 @@ class SkillOutcomeStats:
 
 def update_stats(
     stats: SkillOutcomeStats,
-    success: bool,
     reward_delta: float,
+    success: bool,
 ) -> SkillOutcomeStats:
     """Update aggregate stats in place and return the same object."""
     stats.attempts += 1
@@ -63,4 +63,3 @@ def apply_stats_to_skill(skill: GameSkill, stats: SkillOutcomeStats) -> GameSkil
 
 def _clamp(value: float, lower: float, upper: float) -> float:
     return min(max(value, lower), upper)
-
