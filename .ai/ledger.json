@@ -1,24 +1,39 @@
 {
   "schema_version": "wkstruc-ledger/v9",
-  "task_id": "iter-parallel-skill-runtime-20260510",
-  "state": "IN_PROGRESS",
+  "task_id": "iter-agent-architecture-safety-l2-lite-20260513",
+  "state": "NEEDS_REVIEW",
   "progress": {
-    "done": 0,
-    "total": 9,
-    "label": "0 / 9 steps"
+    "done": 7,
+    "total": 7,
+    "label": "7 / 7 steps"
   },
   "last_run": {
-    "at": "2026-05-10T00:00:00",
-    "agent": "local-execution-agent",
-    "summary": "Started parallel AgentBench skill runtime and RL/MOBA tactical runtime patch"
+    "at": "2026-05-13T20:19:50.1410401+08:00",
+    "agent": "codex",
+    "summary": "Completed safety gate and方案A minimal policy/advisory patch; waiting for Web Review."
   },
   "validation": {
-    "status": "NOT_RUN",
-    "commands": [],
-    "summary": "Not run"
+    "status": "PASS",
+    "commands": [
+      "python -m json.tool .ai/ledger.json",
+      "python -m compileall hybrid_arena",
+      "pytest hybrid_arena/skill_runtime/tests -v",
+      "pytest hybrid_arena/services/api/tests -v",
+      "pytest hybrid_arena/minimoba/tactical_runtime/tests -v",
+      "python -m hybrid_arena.scripts.skill_runtime_demo --root . --db .skills/state.db --once --list-tools",
+      "python -m hybrid_arena.scripts.skill_runtime_demo --root . --db .skills/state.db --once --explain-affordances",
+      "python -m hybrid_arena.scripts.skill_runtime_demo --root . --db .skills/state.db --once --policy-summary",
+      "pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v",
+      "pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/services/api hybrid_arena/scripts/tests -v",
+      "ruff check hybrid_arena"
+    ],
+    "summary": "Full requested validation matrix passed. MiniMOBA rendering test skipped because pygame is not installed."
   },
   "open_items": [],
-  "checkpoint_id": "checkpoint-v0",
-  "last_review_report": null,
-  "consumed_inbox": []
+  "last_review_report": "ref/review-report-20260513.md",
+  "checkpoint_id": "checkpoint-agent-architecture-safety-l2-lite-20260513",
+  "consumed_inbox": [
+    ".ai/inbox/plan.md",
+    ".ai/inbox/hybrid_arena_parallel_skill_runtime_plan.md"
+  ]
 }
