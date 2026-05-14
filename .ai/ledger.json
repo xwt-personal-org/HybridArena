@@ -8,32 +8,59 @@
     "label": "7 / 7 steps"
   },
   "last_run": {
-    "at": "2026-05-13T20:19:50.1410401+08:00",
+    "at": "2026-05-14T20:02:44.0152469+08:00",
     "agent": "codex",
-    "summary": "Completed safety gate and方案A minimal policy/advisory patch; waiting for Web Review."
+    "summary": "Fixed GitHub Actions dependency extras locally and committed; remote upload is blocked by GitHub connectivity from this environment."
   },
   "validation": {
-    "status": "PASS",
+    "status": "PARTIAL",
     "commands": [
-      "python -m json.tool .ai/ledger.json",
-      "python -m compileall hybrid_arena",
-      "pytest hybrid_arena/skill_runtime/tests -v",
-      "pytest hybrid_arena/services/api/tests -v",
-      "pytest hybrid_arena/minimoba/tactical_runtime/tests -v",
-      "python -m hybrid_arena.scripts.skill_runtime_demo --root . --db .skills/state.db --once --list-tools",
-      "python -m hybrid_arena.scripts.skill_runtime_demo --root . --db .skills/state.db --once --explain-affordances",
-      "python -m hybrid_arena.scripts.skill_runtime_demo --root . --db .skills/state.db --once --policy-summary",
-      "pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v",
-      "pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/services/api hybrid_arena/scripts/tests -v",
-      "ruff check hybrid_arena"
+      {
+        "command": "python -m pip install -e \".[dev,rl,app]\"",
+        "status": "FAIL",
+        "summary": "Local shell uses Python 3.14.0; package requires >=3.10,<3.13. Remote CI matrix uses 3.10/3.11/3.12."
+      },
+      {
+        "command": "ruff check hybrid_arena",
+        "status": "PASS",
+        "summary": "All checks passed."
+      },
+      {
+        "command": "python -m compileall hybrid_arena",
+        "status": "PASS",
+        "summary": "Compile completed."
+      },
+      {
+        "command": "pytest hybrid_arena -v",
+        "status": "PASS",
+        "summary": "202 passed, 1 skipped."
+      },
+      {
+        "command": "python -m json.tool .ai/ledger.json",
+        "status": "PASS",
+        "summary": "Ledger JSON is valid."
+      }
     ],
-    "summary": "Full requested validation matrix passed. MiniMOBA rendering test skipped because pygame is not installed."
+    "summary": "Workflow dependency fix is locally linted, compiled, and tested. Editable install could not be validated locally due unsupported Python 3.14 runtime; GitHub Actions validates the target Python 3.10/3.11/3.12 matrix."
   },
-  "open_items": [],
+  "open_items": [
+    {
+      "severity": "blocker",
+      "source": "local upload",
+      "summary": "Cannot push commit 01a3594 to PR branch because HTTPS connections to github.com fail and GitHub connector MCP initialization fails.",
+      "commands": [
+        "git -c http.version=HTTP/1.1 push -u origin codex/agent-architecture-safety-l2-lite",
+        "git ls-remote --heads origin codex/agent-architecture-safety-l2-lite",
+        "Invoke-WebRequest https://github.com",
+        "mcp GitHub _get_pr_info"
+      ]
+    }
+  ],
   "last_review_report": "ref/review-report-20260513.md",
   "checkpoint_id": "checkpoint-agent-architecture-safety-l2-lite-20260513",
   "consumed_inbox": [
     ".ai/inbox/plan.md",
-    ".ai/inbox/hybrid_arena_parallel_skill_runtime_plan.md"
+    ".ai/inbox/hybrid_arena_parallel_skill_runtime_plan.md",
+    ".ai/inbox/plan-ci-app-extra-20260514.md"
   ]
 }
