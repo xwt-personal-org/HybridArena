@@ -3,27 +3,43 @@
   "task_id": "iter-five-phase-industrial-rlmoba-20260519",
   "state": "NEEDS_REVIEW",
   "progress": {
-    "done": 2,
+    "done": 3,
     "total": 5,
-    "label": "2 / 5 phases"
+    "label": "3 / 5 phases"
   },
   "last_run": {
-    "at": "2026-05-19T05:57:52.2504588-07:00",
+    "at": "2026-05-19T06:02:47.3108586-07:00",
     "agent": "codex-local-execution-agent",
-    "summary": "Phase 2 completed: local distributed Actor/Learner skeleton, message contracts, bounded replay queue, policy sync, V-trace, and two-actor CPU smoke run."
+    "summary": "Phase 3 completed: PyTorch to ONNX export, ONNX Runtime CPU parity validation, latency report contract, and isolated C++ inference skeleton."
   },
   "validation": {
     "status": "PASS",
     "commands": [
-      "python -m compileall hybrid_arena/distributed hybrid_arena/scripts/distributed_smoke.py",
-      "pytest hybrid_arena/distributed/tests -v",
-      "python -m hybrid_arena.scripts.distributed_smoke --actors 2 --steps 128 --seed 7",
-      "pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v",
+      "python -m compileall hybrid_arena/deployment",
+      "python -m hybrid_arena.deployment.export_onnx --output artifacts/policy.onnx --seed 7",
+      "python -m hybrid_arena.deployment.onnx_validate --model artifacts/policy.onnx --seed 7",
+      "pytest hybrid_arena/deployment/tests -v",
       "ruff check hybrid_arena"
     ],
-    "summary": "Phase 2 validation passed. Distributed tests 5 passed. Local smoke completed with update_count=2, policy_version=2, queue_depth=0, dropped_chunks=0, policy_version_lag=1. MiniMOBA/training/algorithms regression tests 103 passed, 1 skipped. compileall passed. ruff passed after annotation formatting fixes."
+    "summary": "Phase 3 validation passed. ONNX export produced artifacts/policy.onnx with sha256 59496dc29122007dea9dd1e3dc509febdeb5fee0ffa49fef2fc5f22a53f0896d. ONNX Runtime CPU parity passed with max_abs_diff=3.725290298461914e-08. Deployment tests 3 passed. compileall and ruff passed."
   },
-  "open_items": [],
+  "open_items": [
+    {
+      "phase": 3,
+      "status": "NEEDS_WEB",
+      "item": "cmake is not installed in the current environment, so cpp_inference configure/build was not run."
+    },
+    {
+      "phase": 3,
+      "status": "NEEDS_WEB",
+      "item": "ONNXRUNTIME_ROOT is not set; C++ ONNX Runtime headers/libs were not available for the optional C++ inference target."
+    },
+    {
+      "phase": 3,
+      "status": "NEEDS_WEB",
+      "item": "CUDA/TensorRT acceleration was not validated; no TensorRT speedup claim is made."
+    }
+  ],
   "checkpoint_id": "checkpoint-agent-architecture-l2-lite-20260513",
   "last_review_report": null,
   "consumed_inbox": [
@@ -43,6 +59,13 @@
       "state": "NEEDS_REVIEW",
       "validation_status": "PASS",
       "summary": "Actors and learner are logically decoupled through local message contracts and a bounded queue; policy version lag is observable; V-trace has deterministic tests; CPU smoke run completes without network services."
+    },
+    {
+      "phase": 3,
+      "name": "ONNX / C++ / TensorRT Inference Path",
+      "state": "NEEDS_REVIEW",
+      "validation_status": "PASS",
+      "summary": "PyTorch to ONNX export and ONNX Runtime CPU parity passed; C++ runtime skeleton is present; CMake, C++ ONNX Runtime, CUDA, and TensorRT remain environment open items."
     }
   ]
 }

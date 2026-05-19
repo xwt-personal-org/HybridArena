@@ -57,8 +57,12 @@ app = [
     "uvicorn>=0.29",
     "streamlit>=1.35",
 ]
+deploy = [
+    "onnx>=1.21",
+    "onnxruntime>=1.26",
+]
 all = [
-    "hybrid_arena[dev,rl,llm,demo,app]",
+    "hybrid_arena[dev,rl,llm,demo,app,deploy]",
 ]
 
 [project.scripts]

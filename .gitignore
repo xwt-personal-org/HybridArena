@@ -47,6 +47,11 @@ models/
 outputs/
 grpo_output/
 grpo_lora_weights/
+artifacts/
+*.onnx
+*.onnx.json
+*.engine
+cpp_inference/build/
 
 # Env
 .env
