@@ -3,25 +3,26 @@
   "task_id": "iter-five-phase-industrial-rlmoba-20260519",
   "state": "NEEDS_REVIEW",
   "progress": {
-    "done": 4,
+    "done": 5,
     "total": 5,
-    "label": "4 / 5 phases"
+    "label": "5 / 5 phases"
   },
   "last_run": {
-    "at": "2026-05-19T06:07:58.6726726-07:00",
+    "at": "2026-05-19T06:12:23.7614454-07:00",
     "agent": "codex-local-execution-agent",
-    "summary": "Phase 4 completed: deterministic RulePlanner remains default, LLM stub JSON schema validation, planner memory/persona metadata, and macro reward/action-mask bias adapter."
+    "summary": "Phase 5 completed: QA/rating/tournament loop with Elo, objective-aware regression gates, report writers, and CPU smoke tournament reports."
   },
   "validation": {
     "status": "PASS",
     "commands": [
-      "python -m compileall hybrid_arena/inference",
-      "pytest hybrid_arena/inference/tests -v",
+      "python -m compileall hybrid_arena/qa hybrid_arena/scripts/qa_tournament.py",
+      "pytest hybrid_arena/qa/tests -v",
+      "python -m hybrid_arena.scripts.qa_tournament --episodes 4 --seed 7 --output results/qa/smoke",
       "pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/services/api hybrid_arena/scripts/tests -v",
       "pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v",
       "ruff check hybrid_arena"
     ],
-    "summary": "Phase 4 validation passed. Inference tests 23 passed. AgentBench/core/scenarios/API/scripts regression tests 40 passed. MiniMOBA/training/algorithms regression tests 103 passed, 1 skipped. compileall and ruff passed."
+    "summary": "Phase 5 validation passed. QA tests 5 passed. Tournament smoke produced JSON/CSV/Markdown under results/qa/smoke with Elo final_rating=1019.096194169577 and objective metrics present. AgentBench/core/scenarios/API/scripts regression tests 40 passed. MiniMOBA/training/algorithms regression tests 103 passed, 1 skipped. compileall and ruff passed."
   },
   "open_items": [
     {
@@ -40,7 +41,7 @@
       "item": "CUDA/TensorRT acceleration was not validated; no TensorRT speedup claim is made."
     }
   ],
-  "checkpoint_id": "checkpoint-agent-architecture-l2-lite-20260513",
+  "checkpoint_id": "checkpoint-five-phase-industrial-rlmoba-20260519",
   "last_review_report": null,
   "consumed_inbox": [
     ".ai/inbox/hybridarena-five-phase-plan-20260519.md"
@@ -73,6 +74,13 @@
       "state": "NEEDS_REVIEW",
       "validation_status": "PASS",
       "summary": "RulePlanner remains deterministic default; LLM stub outputs strict JSON; invalid planner output is rejected; macro adapter converts planner decisions to explicit reward and legal action-mask biases without bypassing MiniMOBA action masks."
+    },
+    {
+      "phase": 5,
+      "name": "Automated QA / Rating / Tournament Evaluation Loop",
+      "state": "NEEDS_REVIEW",
+      "validation_status": "PASS",
+      "summary": "Elo is the default rating system; TrueSkill-like remains optional; tournament reports are generated under results/qa; gates include hard_win_rate, base_exposed_rate, avg_base_damage, and avg_tower_damage."
     }
   ]
 }
