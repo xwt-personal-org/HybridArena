@@ -1,37 +1,43 @@
 {
   "schema_version": "wkstruc-ledger/v9",
-  "task_id": "iter-agent-architecture-l2-lite-20260512",
+  "task_id": "iter-five-phase-industrial-rlmoba-20260519",
   "state": "NEEDS_REVIEW",
   "progress": {
-    "done": 13,
-    "total": 13,
-    "label": "13 / 13 steps"
+    "done": 1,
+    "total": 5,
+    "label": "1 / 5 phases"
   },
   "last_run": {
-    "at": "2026-05-13T10:10:22+08:00",
-    "agent": "local-execution-agent",
-    "summary": "Completed HybridArena agent-architecture L2-lite parallel patch; waiting for Web Review."
+    "at": "2026-05-19T05:46:53.5671004-07:00",
+    "agent": "codex-local-execution-agent",
+    "summary": "Phase 1 completed: CTDE global state, offline replay schema, synthetic expert data, BC/CQL/IQL CPU-smoke interfaces, and objective reachability guard."
   },
   "validation": {
     "status": "PASS",
     "commands": [
       "python -m json.tool .ai/ledger.json",
       "python -m compileall hybrid_arena",
-      "pytest hybrid_arena/skill_runtime/tests -v",
-      "pytest hybrid_arena/services/api/tests -v",
-      "python -m hybrid_arena.scripts.skill_runtime_demo --root . --db .skills/state.db --once --list-tools",
-      "python -m hybrid_arena.scripts.skill_runtime_demo --root . --db .skills/state.db --once --explain-affordances",
-      "pytest hybrid_arena/minimoba/tactical_runtime/tests -v",
+      "pytest hybrid_arena/minimoba/tests/test_ctde_state.py -v",
+      "pytest hybrid_arena/data/offline_replay/tests/test_replay_schema.py -v",
+      "pytest hybrid_arena/algorithms/tests/test_offline_algorithms.py -v",
       "pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v",
-      "pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/services/api hybrid_arena/scripts/tests -v",
       "ruff check hybrid_arena"
     ],
-    "summary": "All validations pass. JSON validation and compileall passed. Skill runtime tests 76 passed. API tests 6 passed. Skill runtime demo list-tools and explain-affordances passed. Tactical runtime tests 85 passed. MiniMOBA/training/algorithms regression tests 96 passed, 1 skipped. AgentBench/core/scenarios/API/scripts regression tests 40 passed. Ruff passed."
+    "summary": "Phase 1 validation passed. CTDE tests 3 passed. Offline replay schema tests 2 passed. Offline algorithm tests 4 passed. MiniMOBA/training/algorithms regression tests 103 passed, 1 skipped. compileall passed. ruff passed after formatting fixes."
   },
   "open_items": [],
   "checkpoint_id": "checkpoint-agent-architecture-l2-lite-20260513",
   "last_review_report": null,
   "consumed_inbox": [
-    ".ai/inbox/plan.md"
+    ".ai/inbox/hybridarena-five-phase-plan-20260519.md"
+  ],
+  "phase_history": [
+    {
+      "phase": 1,
+      "name": "MARL + Offline RL Foundation",
+      "state": "NEEDS_REVIEW",
+      "validation_status": "PASS",
+      "summary": "CTDE global state is separate from actor observations; synthetic replay round-trip is deterministic; BC loss decreases; CQL/IQL smoke losses are finite; objective reachability guard blocks zero-objective claims."
+    }
   ]
 }

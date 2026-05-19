@@ -8,6 +8,7 @@ import numpy as np
 from gymnasium import spaces
 from pettingzoo import ParallelEnv
 
+from hybrid_arena.minimoba.ctde_state import build_global_state
 from hybrid_arena.minimoba.game_engine import GameState
 
 
@@ -157,6 +158,12 @@ class MiniMOBAEnv(ParallelEnv):
     def is_game_over(self) -> bool:
         """Convenience property to check if the game has ended."""
         return self.game_state is not None and self.game_state.is_game_over()
+
+    def get_global_state(self) -> np.ndarray:
+        """Return CTDE-only global state outside the actor observation contract."""
+        if self.game_state is None:
+            raise RuntimeError("Environment not reset. Call reset() before requesting global state.")
+        return build_global_state(self.game_state)
 
     def close(self):
         try:

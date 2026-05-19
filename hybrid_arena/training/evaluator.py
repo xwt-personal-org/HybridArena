@@ -16,6 +16,7 @@ import numpy as np
 
 from hybrid_arena.algorithms.self_play.elo import ELORatingSystem
 from hybrid_arena.minimoba.env import parallel_env
+from hybrid_arena.training.offline_pretrain import objective_reachability_guard
 
 
 def _call_policy(policy_fn: Callable, obs: dict, agent_id: str):
@@ -245,6 +246,7 @@ class Evaluator:
         n_episodes: int | None = None,
         seeds: list[int] | None = None,
         global_step: int = 0,
+        require_objective_reachability: bool = False,
     ) -> dict:
         """Run evaluation and record results."""
         episodes = n_episodes or self.n_eval_episodes
@@ -257,6 +259,8 @@ class Evaluator:
             seed_offset=seed_offset,
         )
         result["global_step"] = global_step
+        if require_objective_reachability:
+            objective_reachability_guard(result)
         self.history.append(result)
         return result
 
