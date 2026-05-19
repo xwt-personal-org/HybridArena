@@ -1,27 +1,15 @@
-"""LLM Planner: High-level tactical decision making.
-
-Implements a simplified state machine (analyze -> decide -> reflect cycle)
-that can be backed by either LangGraph or plain Python.
-
-Output format (JSON):
-    {
-      "strategy": "团战/分推/发育/防守/抓人",
-      "reasoning": "brief explanation",
-      "assignments": {"tank": "task", "dps_1": "task", "dps_2": "task", "support": "task"},
-      "target_positions": {"tank": [x,y], "dps_1": [x,y], ...}
-    }
-"""
+"""LLM planner interfaces with strict macro-decision validation."""
 
 from __future__ import annotations
 
 import json
-import os
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Any, Protocol
 
-from hybrid_arena.inference.macro_actions import validate_macro_action
+from hybrid_arena.inference.macro_actions import canonical_macro_action, validate_macro_action
+from hybrid_arena.inference.prompt_templates import build_macro_prompt
 
 
 @dataclass
@@ -41,18 +29,60 @@ class BaseLLMClient(Protocol):
         ...
 
 
-class DummyLLMClient:
+class LLMPlannerProvider(Protocol):
     def generate(self, prompt: str) -> str:
-        return "group_mid"
+        ...
+
+
+class StubLLMProvider:
+    def __init__(self, macro_action: str = "GROUP_MID"):
+        self.macro_action = macro_action
+
+    def generate(self, prompt: str) -> str:
+        return json.dumps(
+            {
+                "macro_action": self.macro_action,
+                "reasoning": "deterministic stub provider",
+                "reward_bias": {},
+                "action_mask_bias": {},
+            },
+            sort_keys=True,
+        )
+
+
+class DummyLLMClient(StubLLMProvider):
+    def __init__(self):
+        super().__init__("group_mid")
+
+
+def validate_llm_decision(payload: dict[str, Any]) -> dict[str, Any]:
+    required = {"macro_action", "reasoning", "reward_bias", "action_mask_bias"}
+    missing = required.difference(payload)
+    if missing:
+        raise ValueError(f"Missing LLM decision fields: {sorted(missing)}")
+    macro_action = validate_macro_action(str(payload["macro_action"]))
+    if not isinstance(payload["reasoning"], str):
+        raise ValueError("reasoning must be a string")
+    for field_name in ("reward_bias", "action_mask_bias"):
+        if not isinstance(payload[field_name], dict):
+            raise ValueError(f"{field_name} must be a dict")
+        for key, value in payload[field_name].items():
+            if not isinstance(key, str) or not isinstance(value, (int, float)):
+                raise ValueError(f"{field_name} entries must be numeric")
+    return {
+        "macro_action": macro_action,
+        "canonical_macro_action": canonical_macro_action(macro_action),
+        "reasoning": payload["reasoning"],
+        "reward_bias": dict(payload["reward_bias"]),
+        "action_mask_bias": dict(payload["action_mask_bias"]),
+    }
 
 
 class LLMPlanner:
-    """High-level tactical planner.
+    """High-level planner.
 
-    Supports three modes:
-        - "mock": deterministic rule-based planner (no LLM dependency).
-        - "local": local transformer model (Qwen 1.5B/3B).
-        - "api": remote API (DeepSeek, etc.).
+    PlannerState inputs return a macro action string. Legacy natural-language
+    summaries still return the older strategy dict used by existing demos.
     """
 
     def __init__(
@@ -60,115 +90,67 @@ class LLMPlanner:
         client: BaseLLMClient | str | None = None,
         model_name: str | None = None,
         mode: str | None = None,
+        provider: LLMPlannerProvider | None = None,
     ):
         if isinstance(client, str) and mode is None:
             mode = client
             client = None
         self.client = client
+        self.provider = provider
         self.mode = mode or ("client" if client is not None else "mock")
         self.model_name = model_name
-        self._llm_fn: Callable | None = None
+        self._llm_fn: Callable[[str], str] | None = None
 
-        if self.mode == "local":
-            self._init_local()
-        elif self.mode == "api":
-            self._init_api()
+    def _generate_macro_json(self, prompt: str) -> str:
+        if self.provider is not None:
+            return self.provider.generate(prompt)
+        if self.client is not None:
+            return self.client.generate(prompt)
+        return StubLLMProvider().generate(prompt)
 
-    def _init_local(self) -> None:
-        """Initialize local transformer model."""
+    def _build_macro_prompt(self, planner_state) -> str:
+        return build_macro_prompt(planner_state)
+
+    def plan(self, game_summary, history: list[str] | None = None):
+        if not isinstance(game_summary, str):
+            prompt = self._build_macro_prompt(game_summary)
+            decision = self._parse_macro_decision(self._generate_macro_json(prompt))
+            return decision["macro_action"]
+
+        prompt = self._build_legacy_prompt(game_summary, history)
+        response = self._mock_generate(prompt) if self.mode == "mock" else self._mock_generate(prompt)
+        return self._parse_strategy(response)
+
+    @staticmethod
+    def _parse_macro_decision(text: str) -> dict[str, Any]:
         try:
-            import torch
-            from transformers import AutoModelForCausalLM, AutoTokenizer
+            payload = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise ValueError("LLM macro output must be valid JSON") from exc
+        return validate_llm_decision(payload)
 
-            model_name = self.model_name or "Qwen/Qwen2.5-1.5B-Instruct"
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                torch_dtype=torch.float16,
-                device_map="auto",
-            )
-            self._llm_fn = self._local_generate
-        except Exception as e:
-            print(f"[LLMPlanner] Local model init failed: {e}. Falling back to mock.")
-            self.mode = "mock"
-
-    def _init_api(self) -> None:
-        """Initialize API client."""
-        try:
-            import openai
-
-            self.api_client = openai.OpenAI(
-                api_key=os.environ.get("OPENAI_API_KEY"),
-                base_url=os.environ.get("OPENAI_BASE_URL", "https://api.deepseek.com"),
-            )
-            self.api_model = self.model_name or "deepseek-chat"
-            self._llm_fn = self._api_generate
-        except Exception as e:
-            print(f"[LLMPlanner] API init failed: {e}. Falling back to mock.")
-            self.mode = "mock"
-
-    def _local_generate(self, prompt: str) -> str:
-        messages = [
-            {"role": "system", "content": "你是MOBA游戏战术AI。只输出JSON。"},
-            {"role": "user", "content": prompt},
-        ]
-        text = self.tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
-        inputs = self.tokenizer(text, return_tensors="pt").to(self.model.device)
-
-        import torch
-
-        with torch.no_grad():
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=200,
-                temperature=0.7,
-                do_sample=True,
-                top_p=0.9,
-            )
-        response = self.tokenizer.decode(
-            outputs[0][inputs.input_ids.shape[1] :], skip_special_tokens=True
-        )
-        return response
-
-    def _api_generate(self, prompt: str) -> str:
-        response = self.api_client.chat.completions.create(
-            model=self.api_model,
-            messages=[
-                {"role": "system", "content": "你是MOBA游戏战术AI。只输出JSON。"},
-                {"role": "user", "content": prompt},
-            ],
-            max_tokens=200,
-            temperature=0.7,
-        )
-        return response.choices[0].message.content
+    def _build_legacy_prompt(self, game_summary: str, history: list[str] | None = None) -> str:
+        history_text = ""
+        if history:
+            history_text = "\nRecent decisions:\n" + "\n".join(history[-3:])
+        return f"{game_summary}{history_text}"
 
     def _mock_generate(self, prompt: str) -> str:
-        """Deterministic fallback when no LLM is available."""
-        # Simple heuristic based on prompt keywords
-        if "血量极低" in prompt or "阵亡" in prompt:
-            strategy = "防守"
-            reasoning = "队伍状态不佳，先防守发育"
-        elif "可见敌方" in prompt and "4人" in prompt:
+        if "+" in prompt or "visible" in prompt:
             strategy = "团战"
-            reasoning = "敌方全员可见，可集合开团"
-        elif "经济差" in prompt and "+" in prompt.split("经济差")[1].split("\n")[0]:
-            strategy = "分推"
-            reasoning = "经济领先，可分推扩大优势"
+            reasoning = "mock planner sees an advantage"
         else:
             strategy = "发育"
-            reasoning = "局势不明，优先发育"
-
+            reasoning = "mock planner default"
         return json.dumps(
             {
                 "strategy": strategy,
                 "reasoning": reasoning,
                 "assignments": {
-                    "tank": "保护后排" if strategy == "防守" else "先手开团",
-                    "dps_1": "输出敌方核心",
-                    "dps_2": "侧翼骚扰" if strategy == "分推" else "集火后排",
-                    "support": "治疗保护",
+                    "tank": "frontline",
+                    "dps_1": "damage",
+                    "dps_2": "side pressure",
+                    "support": "protect",
                 },
                 "target_positions": {
                     "tank": [16, 16],
@@ -180,54 +162,8 @@ class LLMPlanner:
             ensure_ascii=False,
         )
 
-    def _build_macro_prompt(self, planner_state) -> str:
-        return (
-            "Choose exactly one macro action from this set: "
-            "group_mid, push_nearest_tower, retreat, farm_safe, protect_support, "
-            "force_teamfight, split_push.\n"
-            f"Planner state: {planner_state}\n"
-            "Output only one macro action."
-        )
-
-    def plan(self, game_summary, history: list[str] | None = None):
-        """Generate a tactical plan from game summary.
-
-        Args:
-            game_summary: Natural-language game state summary or PlannerState.
-            history: Optional recent decision history.
-
-        Returns:
-            Parsed strategy dict.
-        """
-        if not isinstance(game_summary, str):
-            prompt = self._build_macro_prompt(game_summary)
-            if self.client is not None:
-                response = self.client.generate(prompt)
-            elif self.mode == "mock":
-                response = DummyLLMClient().generate(prompt)
-            else:
-                response = self._llm_fn(prompt)
-            return validate_macro_action(str(response).strip().split()[0])
-
-        history_text = ""
-        if history:
-            history_text = "\n最近决策历史：\n" + "\n".join(history[-3:])
-
-        prompt = f"""{game_summary}{history_text}
-
-选择最优策略并为每个英雄分配任务。输出JSON格式：
-{{"strategy":"团战/分推/发育/防守/抓人","reasoning":"原因","assignments":{{"tank":"任务","dps_1":"任务","dps_2":"任务","support":"任务"}},"target_positions":{{"tank":[x,y],"dps_1":[x,y],"dps_2":[x,y],"support":[x,y]}}}}"""
-
-        if self.mode == "mock" or self._llm_fn is None:
-            response = self._mock_generate(prompt)
-        else:
-            response = self._llm_fn(prompt)
-
-        return self._parse_strategy(response)
-
     @staticmethod
     def _parse_strategy(text: str) -> dict:
-        """Parse JSON from LLM response with fallback."""
         try:
             return json.loads(text)
         except json.JSONDecodeError:
@@ -239,12 +175,12 @@ class LLMPlanner:
                     pass
         return {
             "strategy": "发育",
-            "reasoning": "JSON解析失败，执行默认策略",
+            "reasoning": "JSON parse failed; using default strategy.",
             "assignments": {
-                "tank": "巡逻",
-                "dps_1": "清野",
-                "dps_2": "清野",
-                "support": "跟随坦克",
+                "tank": "patrol",
+                "dps_1": "farm",
+                "dps_2": "farm",
+                "support": "follow tank",
             },
             "target_positions": {
                 "tank": [16, 16],
@@ -256,7 +192,7 @@ class LLMPlanner:
 
 
 class PlannerStateMachine:
-    """Simplified state machine: analyze -> decide -> (optional) reflect."""
+    """Simplified state machine: analyze -> decide -> optional reflect."""
 
     def __init__(self, planner: LLMPlanner, reflect_interval: int = 5):
         self.planner = planner
@@ -264,18 +200,10 @@ class PlannerStateMachine:
         self.state = TeamState()
 
     def step(self, game_summary: str) -> dict:
-        """Run one planning cycle.
-
-        Returns:
-            Strategy dict with assignments and target positions.
-        """
         self.state.game_summary = game_summary
         self.state.turn_count += 1
-
-        # Every N steps, add a reflection step (simplified: just re-plan)
         if self.state.turn_count % self.reflect_interval == 0:
-            self.state.reflection = f"第{self.state.turn_count}步重新评估局势"
-
+            self.state.reflection = f"Step {self.state.turn_count}: refresh tactical assessment"
         plan = self.planner.plan(game_summary, self.state.action_history)
         self.state.current_strategy = plan.get("strategy", "发育")
         self.state.hero_assignments = plan.get("assignments", {})

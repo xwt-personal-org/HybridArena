@@ -14,6 +14,7 @@ class PlannerState:
     enemy_summary: dict
     objective_summary: dict
     score_summary: dict
+    persona_metadata: dict | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -59,4 +60,5 @@ def summarize_game_state(game_state, team: str) -> PlannerState:
             "ally_kills": game_state.red_kills if team == "red" else game_state.blue_kills,
             "enemy_kills": game_state.blue_kills if team == "red" else game_state.red_kills,
         },
+        persona_metadata=None,
     )
