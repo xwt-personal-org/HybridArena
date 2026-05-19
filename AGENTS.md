@@ -7,14 +7,16 @@
 - **项目名称**：HybridArena
 - **技术栈**：Python 3.10+ + PyTorch 2.x + PettingZoo + CleanRL + Qwen2.5 LLM
 - **目标硬件**：RTX 4060 Laptop (8GB VRAM)
-- **当前状态**：Phase A-E 完成，Phase F 进行中
+- **当前主线**：MiniMOBA / RL + LLM Planner 混合架构
+- **应用层**：AgentBench（JD / RAG / 工单）已完成首版，保留维护
+- **当前状态**：RL 工程闭环已完成，进入正式实验阶段；ISSUE-F13 待解决
 
 ## 启动协议
 
 每次新对话：
 1. 检查 `docs/inbox/` 有无新文件 → 有则 merge-back
 2. 读 `docs/progress.md` → 当前进度与阶段
-3. 读 `docs/issues.md` → 已知问题
+3. 读 `docs/issues.md` → 已知问题（特别关注 ISSUE-F13）
 4. 判断任务来源（dispatch / 口头 / 无）→ 对应处理
 5. 简短报告状态
 
@@ -40,16 +42,17 @@
 pip install -e .            # base (env + agents)
 pip install -e ".[dev]"     # with test/lint tools
 pip install -e ".[rl]"      # with PyTorch
+pip install -e ".[app]"     # with FastAPI + Streamlit (AgentBench)
 pip install -e ".[all]"     # everything
 ```
 
 ### 测试
 ```bash
-pytest hybrid_arena/ -v                         # 全部测试
-pytest hybrid_arena/minimoba/tests/ -v          # 环境测试
-pytest hybrid_arena/minimoba/tests/test_api.py -v       # PettingZoo API compliance
-pytest hybrid_arena/minimoba/tests/test_env.py -v       # Environment correctness
-pytest hybrid_arena/minimoba/tests/test_reward.py -v    # Reward function tests
+pytest hybrid_arena/ -v                                    # 全部测试
+pytest hybrid_arena/minimoba/tests/ -v                     # 环境测试
+pytest hybrid_arena/training/tests/ -v                     # 训练测试
+pytest hybrid_arena/algorithms/tests/ -v                   # 算法测试
+pytest hybrid_arena/core hybrid_arena/scenarios -v         # AgentBench 应用层测试
 ```
 
 ### 静态检查
@@ -65,14 +68,19 @@ python hybrid_arena/scripts/benchmark_fps.py            # Target: > 500 FPS
 
 ### 训练
 ```bash
-python training/train.py --algorithm ppo_dualclip --seed 42
-python training/grpo_qlora_trainer.py --model Qwen2.5-1.5B-Instruct
+python -m hybrid_arena.scripts.train --algo ppo_dualclip --seed 42 --total-timesteps 512 --num-steps 32 --device cpu
+```
+
+### 评估
+```bash
+python -m hybrid_arena.scripts.evaluate --opponent rule_based --episodes 3 --seed 42
 ```
 
 ### 演示
 ```bash
 python hybrid_arena/scripts/play_human.py               # 键盘控制
-streamlit run demo/app.py                                # Web demo
+streamlit run hybrid_arena/demo/moba_app.py              # MOBA 主线 Demo
+streamlit run hybrid_arena/demo/app.py                   # AgentBench 应用层 Demo
 ```
 
 ## 禁止
@@ -82,10 +90,11 @@ streamlit run demo/app.py                                # Web demo
 - 不提交 `models/`, `runs/`, `checkpoints/` 等生成目录
 
 ## 重要文档
-- `docs/plan.md` — 活跃计划（含 scope 标签）
+- `docs/plan.md` — 活跃计划（RL 主线路线图）
 - `docs/progress.md` — 步骤完成状态
-- `docs/issues.md` — 执行问题记录
-- `docs/architecture.md` — 架构文档
+- `docs/issues.md` — 执行问题记录（ISSUE-F13 为主线阻塞）
+- `docs/architecture.md` — RL 下一阶段架构设计
+- `docs/experiment-report-v0.md` — RL 实验报告
 - `docs/refs/` — 技术参考（实施方案、适配方案、调研）
-- `docs/experiment-report-v0.md` — 实验报告
+- `docs/agentbench-architecture.md` — AgentBench 应用层架构
 - `CHANGELOG.md` — 版本变更记录

@@ -1,155 +1,152 @@
-# HybridArena AgentBench
+# HybridArena
 
-**面向 AI Agent、RAG、评测与通信数智化岗位的本地可运行 AgentBench 平台。**
+**LLM Planner × DRL Control · MiniMOBA 4v4 多智能体研究平台**
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)]()
 
-HybridArena 原本是 LLM Planner x DRL Control 的 MiniMOBA 研究项目。当前主线已重构为 **AgentBench**：保留 planner、evaluator、trace、demo 的工程抽象，把主展示迁移到 JD 解析、通信 RAG、网络工单分诊三个业务场景。MiniMOBA/RL 仍作为研究支线保留。
+HybridArena 是一个 LLM 高层规划 + 深度强化学习微操控制的混合智能体研究平台，载体为 PettingZoo 标准的 4v4 简化 MOBA 环境（MiniMOBA）。项目同时提供 AgentBench 应用层，将 planner、evaluator、trace 能力扩展到 JD 解析、通信 RAG、工单分诊三个业务场景。
 
-## 当前主线
+## 核心能力
 
-| 场景 | 能证明的能力 | 当前实现 |
-|---|---|---|
-| JD 解析与简历差距分析 | Agent workflow、结构化输出、求职材料改写 | taxonomy + evidence span + gap report |
-| 通信知识库 RAG Copilot | RAG、引用式回答、通信领域理解 | JSONL corpus + token retriever + citations |
-| 网络工单分诊与评测台 | AI 测试评测、通信数智化、批处理 | rule classifier + 排障建议 + Macro-F1 |
+| 模块 | 说明 | 状态 |
+|------|------|------|
+| MiniMOBA 环境 | PettingZoo Parallel API，4v4 MOBA，324 联合动作，战争迷雾 | 已完成 |
+| 动作系统 | MultiDiscrete([9,4,9])，324-way action mask | 已完成 |
+| PPO / DualClipPPO | 训练正确性修复，joint categorical policy | 已完成 |
+| MAPPO / QMIX / COMA | 多智能体算法框架 | 已完成 |
+| 塔/基地目标系统 | ObjectiveSystem，推塔/基地经济/胜负条件 | 已完成 |
+| Self-play / Curriculum | 历史策略池、ELO、对手采样、难度切换 | 已完成 |
+| LLM Planner MVP | 高层战术规划（团战/分推/发育），Rule + Dummy LLM 对照 | 已完成 |
+| 实验系统 | train / evaluate / run_ablation CLI，checkpoint，seed sweep | 已完成 |
+| AgentBench 应用层 | JD 解析、通信 RAG、工单分诊，FastAPI + Streamlit | 已完成 |
 
 ## 快速开始
 
 ```bash
-pip install -e ".[dev,app,rl]"
+pip install -e ".[dev,rl]"
 
-pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/services/api hybrid_arena/scripts/tests -v
+# 环境与算法测试
+pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v
 
-uvicorn hybrid_arena.services.api.app:app --reload
-streamlit run hybrid_arena/demo/app.py
-```
+# 训练
+python -m hybrid_arena.scripts.train --algo ppo_dualclip --seed 42 --total-timesteps 512 --num-steps 32 --device cpu
 
-## AgentBench CLI
+# 评估
+python -m hybrid_arena.scripts.evaluate --opponent rule_based --episodes 3 --seed 42 --output results/eval_smoke.json
 
-```bash
-python -m hybrid_arena.scripts.agentbench_run \
-  --scenario jd_resume_match \
-  --input datasets/jd_samples/jd_cases.jsonl \
-  --output results/agentbench/jd_report.json
+# Planner 演示
+python -m hybrid_arena.scripts.play_planner --planner rule --max-steps 50 --render-mode none
 
-python -m hybrid_arena.scripts.agentbench_run \
-  --scenario telecom_rag \
-  --input datasets/telecom_docs/rag_eval_cases.jsonl \
-  --output results/agentbench/rag_report.json
+# MOBA Demo（Streamlit）
+streamlit run hybrid_arena/demo/moba_app.py
 
-python -m hybrid_arena.scripts.agentbench_run \
-  --scenario ticket_triage \
-  --input datasets/ticket_samples/ticket_cases.jsonl \
-  --output results/agentbench/ticket_report.json
-```
-
-每个命令会同时生成 JSON 和 Markdown 报告。
-
-## API
-
-启动：
-
-```bash
-uvicorn hybrid_arena.services.api.app:app --reload
-```
-
-接口：
-
-| Method | Path | 说明 |
-|---|---|---|
-| GET | `/health` | 服务健康检查 |
-| GET | `/scenarios` | 列出场景 |
-| POST | `/tasks/run` | 运行一次 AgentBench task |
-| GET | `/runs` | 列出历史 run |
-| GET | `/runs/{run_id}` | 查看单次 run 与 trace |
-
-示例：
-
-```json
-{
-  "task_id": "jd-001",
-  "scenario": "jd_resume_match",
-  "payload": {
-    "jd_text": "需要 Python、FastAPI、RAG 和评测经验。",
-    "resume_profile": {
-      "skills": ["python_backend"],
-      "evidence": {"python_backend": ["HybridArena CLI"]}
-    }
-  },
-  "metadata": {"run_id": "run-001"}
-}
+# 键盘控制
+python hybrid_arena/scripts/play_human.py
 ```
 
 ## 架构
 
 ```text
 hybrid_arena/
-├── core/                 # TaskInput / TaskRunResult / trace / SQLite / reporting
-├── scenarios/            # jd_resume_match / telecom_rag / ticket_triage
-├── services/api/         # FastAPI app
-├── scripts/              # agentbench_run + research scripts
-├── demo/                 # Streamlit AgentBench demo
-├── minimoba/             # research branch: PettingZoo MOBA environment
-├── algorithms/           # research branch: PPO/MAPPO/QMIX/COMA
-└── training/             # research branch: RL trainer/evaluator
+├── minimoba/             # MiniMOBA 环境：PettingZoo 4v4 MOBA
+│   ├── game_engine.py    # 核心仿真：地图、英雄、战斗、迷雾
+│   ├── env.py            # ParallelEnv 封装
+│   ├── action_encoding.py # 324 联合动作编解码
+│   ├── objectives.py     # 塔/基地目标系统
+│   └── reward_shaper.py  # 奖励配置
+├── algorithms/           # RL 算法：PPO / DualClipPPO / MAPPO / QMIX / COMA
+│   └── networks.py       # CNN + 联合策略网络
+├── training/             # 训练闭环：Trainer / Buffer / Evaluator / Self-play
+├── inference/            # LLM Planner：状态摘要 → 宏观指令 → 策略偏置
+├── core/                 # AgentBench 应用层：schema / trace / SQLite / reporting
+├── scenarios/            # AgentBench 场景：jd_resume_match / telecom_rag / ticket_triage
+├── services/api/         # FastAPI 接口
+├── scripts/              # CLI：train / evaluate / run_ablation / agentbench_run
+├── demo/                 # Streamlit：moba_app.py（主线）/ app.py（AgentBench）
+└── skill_runtime/        # Skill Runtime 扩展原型
 ```
 
-核心数据流：
+### 数据流
 
 ```mermaid
-flowchart LR
-    A["TaskInput"] --> B["Scenario Runner"]
-    B --> C["TaskRunResult"]
-    B --> D["TaskTrace"]
-    C --> E["SQLite Store"]
-    C --> F["API / CLI / Demo"]
-    C --> G["Benchmark Report"]
+flowchart TD
+    A[MiniMOBAEnv] --> B[GameState]
+    B --> C[ObservationBuilder]
+    B --> D[ActionMaskBuilder]
+    B --> E[ObjectiveSystem]
+    C --> F[ActorCritic JointActionPolicy]
+    D --> F
+    F --> G[Trainer]
+    G --> H[RolloutBuffer]
+    H --> I[PPO / DualClipPPO]
+    I --> F
+    G --> J[Evaluator]
+    J --> K[Metrics / Checkpoints / Reports]
+    L[LLM Planner] --> M[MacroActionAdapter]
+    M --> A
 ```
 
-## Trace Contract
+## 环境规格
 
-所有场景返回同一种结果：
+- **Agent**: 红蓝各 4 名英雄（`red_0..3`, `blue_0..3`）
+- **Action Space**: `MultiDiscrete([9, 4, 9])` — 移动(9) × 技能(4) × 目标(9) = 324
+- **Observation**: `Dict` — `local_map (11,11,11)` / `self_state (20,)` / `teammate_states (3,15)` / `global_info (10,)` / `action_mask (324,)`
+- **目标硬件**: RTX 4060 Laptop (8GB VRAM)
+- **性能目标**: > 500 FPS
 
-```python
-TaskRunResult(
-    run_id="...",
-    task_id="...",
-    scenario="jd_resume_match | telecom_rag | ticket_triage",
-    output={...},
-    metrics={...},
-    trace=TaskTrace(steps=[ToolCallRecord(...)]),
-)
+## 已知问题
+
+**ISSUE-F13**：objective reward shaping 提升了 `tower_damage`，但 `hard_win_rate=0.0`、`base_exposed_rate=0.0`、`avg_base_damage=0.0`。需先验证 scripted objective policy 能稳定触达 base 目标后再考虑长训。详见 `docs/issues.md`。
+
+## AgentBench 应用层（可选）
+
+AgentBench 将平台的 planner、evaluator、trace 能力扩展到三个业务场景，可独立运行：
+
+```bash
+pip install -e ".[app]"
+
+# AgentBench CLI
+python -m hybrid_arena.scripts.agentbench_run --scenario jd_resume_match --input datasets/jd_samples/jd_cases.jsonl --output results/agentbench/jd_report.json
+
+# FastAPI
+uvicorn hybrid_arena.services.api.app:app --reload
+
+# AgentBench Demo
+streamlit run hybrid_arena/demo/app.py
 ```
 
-这保证 API、CLI、Streamlit demo 和离线评测共用同一套 runner。
-
-## 研究支线
-
-MiniMOBA/RL 仍保留：
-
-- PettingZoo Parallel API 环境。
-- MultiDiscrete([9, 4, 9]) joint action space。
-- 324-way action mask 与 PPO/DualClipPPO 训练闭环。
-- tower/base objective game、checkpoint、train/evaluate/run_ablation CLI。
-
-研究支线当前状态见 `docs/report.md`：F13 objective reward shaping 提升了 tower damage，但 hard_win_rate、base_exposed_rate、avg_base_damage 仍为 0，暂不继续长训。
+| 场景 | 说明 | 实现 |
+|------|------|------|
+| JD 解析与简历差距分析 | Agent workflow、结构化输出 | taxonomy + evidence span + gap report |
+| 通信知识库 RAG Copilot | RAG、引用式回答 | JSONL corpus + token retriever + citations |
+| 网络工单分诊与评测台 | AI 评测、批处理 | rule classifier + 排障建议 + Macro-F1 |
 
 ## 测试
 
 ```bash
-pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/services/api hybrid_arena/scripts/tests -v
+# 主线（环境 + 训练 + 算法）
 pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v
+
+# AgentBench 应用层
+pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/services/api hybrid_arena/scripts/tests -v
+
+# 全量
+pytest hybrid_arena/ -v
+
+# Lint
 ruff check hybrid_arena
 ```
 
-## 面试材料
+## 文档
 
-- `docs/agentbench-architecture.md`
-- `docs/agentbench-demo-script.md`
-- `docs/agentbench-resume-bullets.md`
-- `docs/agentbench-benchmark-report.md`
+- `docs/plan.md` — 活跃开发计划
+- `docs/progress.md` — 阶段进度
+- `docs/issues.md` — 问题记录
+- `docs/architecture.md` — RL 下一阶段架构设计
+- `docs/experiment-report-v0.md` — RL 实验报告
+- `docs/agentbench-architecture.md` — AgentBench 应用层架构
+- `docs/refs/` — 技术参考
 
 ## License
 

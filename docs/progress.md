@@ -2,64 +2,86 @@
 
 ## 当前状态
 
-- 当前主线：AgentBench v3
-- 最后更新：2026-05-09
-- 状态：报告中的平台转向、三业务场景、API、CLI、demo 与面试文档已完成首版落地
+- 当前主线：MiniMOBA / RL + LLM Planner 混合架构
+- 最后更新：2026-05-18
+- 状态：RL 工程闭环已搭好，进入正式实验与训练有效性验证阶段
 
-## AgentBench v3 进度
+## RL 主线进度
 
-### 阶段 A：平台转向与工程打底
+### 环境与基础设施（已完成）
 
-- [x] A1：新增 `hybrid_arena/core/schema.py`
-- [x] A2：新增 `TraceRecorder` 与 JSONL trace writer
-- [x] A3：新增 SQLite `AgentBenchStore`
-- [x] A4：新增 FastAPI 服务层
-- [x] A5：新增场景注册表
+- [x] MiniMOBA PettingZoo Parallel API 环境
+- [x] MultiDiscrete([9,4,9]) 324 联合动作 + action mask
+- [x] 战争迷雾、英雄系统、地图生成
+- [x] 基准 FPS 测试脚本（目标 >500 FPS）
+- [x] PettingZoo API compliance 测试
+- [x] 环境正确性测试与 reward 测试
 
-### 阶段 B：JD 解析与简历差距 Agent
+### 训练正确性（已完成）
 
-- [x] B1：新增 JD taxonomy 与样例数据
-- [x] B2：实现 JD 技能抽取与 evidence span
-- [x] B3：实现简历差距分析
-- [x] B4：实现 runner 与离线评测
+- [x] 324-way joint categorical policy
+- [x] PPO rollout/update 一致性修复（action_masks + old_values）
+- [x] Clipped value loss + DualClipPPO dual_clip_fraction 指标
+- [x] RolloutBuffer 支持 mask / value 保存
+- [x] Trainer 单环境 8 agent 批处理闭环
 
-### 阶段 C：通信知识库 RAG Copilot
+### 目标系统（已完成框架）
 
-- [x] C1：新增通信知识库样例
-- [x] C2：实现本地 retriever
-- [x] C3：实现引用式回答
-- [x] C4：实现 runner 与 RAG 评测
+- [x] tower / base StructureState
+- [x] ObjectiveSystem + 目标奖励
+- [x] 队伍经济更新
+- [ ] **ISSUE-F13：objective shaping 未产生 hard win（待解决）**
 
-### 阶段 D：网络/工单分诊与评测台
+### 算法（已完成框架）
 
-- [x] D1：新增工单样例数据与标签
-- [x] D2：实现工单分类与摘要
-- [x] D3：实现排障建议
-- [x] D4：实现 runner 与 macro-F1 评测
+- [x] PPO / DualClipPPO
+- [x] MAPPO
+- [x] QMIX
+- [x] COMA
 
-### 阶段 E：统一评测、Trace Viewer 与 Demo
+### 实验系统（已完成）
 
-- [x] E1：新增 `agentbench_run` CLI
-- [x] E2：重写 Streamlit demo 为 AgentBench 面板
-- [x] E3：新增 benchmark Markdown report
+- [x] train / evaluate / run_ablation CLI
+- [x] checkpoint 工具
+- [x] Evaluator（胜率、KDA、tower damage、FPS）
+- [x] SyncParallelEnvRunner
+- [x] Smoke 实验验证流水线可运行
 
-### 阶段 F：面试包装与质量收口
+### Self-play / Curriculum（已完成框架）
 
-- [x] F1：重写 README 为 AgentBench 主线
-- [x] F2：新增架构、演示脚本、简历条目
-- [x] F3：更新 progress/issues/report/changelog
-- [x] F4：全量验证与 ruff 收口
+- [x] SelfPlayPool + ELO
+- [x] CurriculumManager
 
-## 新主线局部验证
+### LLM Planner（已完成 MVP）
 
-- `pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/services/api hybrid_arena/scripts/tests -v`：37 passed
-- `pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v`：96 passed, 1 skipped
+- [x] RulePlanner / DummyLLMClient
+- [x] LLMPlanner 状态机（analyze → decide → reflect）
+- [x] MacroActionAdapter
+- [x] PlannerState / StateTranslator
+- [x] PlannerTrace schema + JSONL recorder
+- [x] play_planner CLI
+
+### 正式实验（待开始）
+
+- [ ] P1.1：正式实验配置
+- [ ] P1.2：run_ablation 配置文件驱动
+- [ ] P1.3：正式 baseline 训练与评估
+- [ ] P1.4：训练有效性判定脚本
+- [ ] P1.5：win_rate 视角审计
+- [ ] P1.6：objective event 统计
+
+## AgentBench 应用层进度（已完成，保留维护）
+
+- [x] core：schema / trace / SQLite storage / reporting
+- [x] scenarios：jd_resume_match / telecom_rag / ticket_triage
+- [x] FastAPI 服务层
+- [x] agentbench_run CLI
+- [x] Streamlit AgentBench demo
+- [x] 面试文档（架构、演示脚本、简历条目、benchmark report）
+
+## 验证记录
+
 - `pytest hybrid_arena/ -v`：180 passed, 1 skipped
-- `python -m compileall hybrid_arena/demo/app.py`：通过
 - `python -m compileall hybrid_arena`：通过
 - `ruff check hybrid_arena`：All checks passed
-- 三个 AgentBench CLI 报告已生成到 `results/agentbench/`
-
-## Research 支线
-
-MiniMOBA、PPO/DualClipPPO、MAPPO、QMIX、COMA、自博弈、课程学习和 LLM Planner 保留。F13 objective reward shaping 仍未解决 hard win 问题，暂不继续长训。
+- AgentBench CLI 三场景均已生成 JSON/Markdown report

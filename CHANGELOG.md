@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Changed
+- Restored MOBA/RL as the project mainline; AgentBench demoted to optional application layer.
+- Rewrote README with MOBA/RL architecture, training/evaluation commands, and environment specs as first-class content.
+- Archived AgentBench v3 plan to `docs/.archive/plan-agentbench-v3.md`; activated RL roadmap in `docs/plan.md`.
+- Updated `docs/progress.md` and `docs/report.md` to reflect RL stages as primary progress tracking.
+- Promoted ISSUE-F13 (objective reward shaping) back to mainline blocker in `docs/issues.md`.
+- Unified `AGENTS.md` status and commands around MOBA/RL mainline.
+
+### Added
+- Added `hybrid_arena/demo/moba_app.py` as the mainline MOBA Streamlit demo.
+- Retained `hybrid_arena/demo/app.py` as the AgentBench application layer demo.
+
+## AgentBench v3 milestone
+
 ### Added
 - Added AgentBench mainline with shared core schemas, trace recording, SQLite run storage, FastAPI API, CLI reports, Streamlit demo, and three business scenarios.
 - Added `jd_resume_match`, `telecom_rag`, and `ticket_triage` scenario packages with deterministic offline runners and evaluators.
@@ -11,7 +25,6 @@
 - Added evaluator metrics consistency tests with required fields validation.
 
 ### Changed
-- Reframed README around AgentBench as the project mainline and moved MiniMOBA/RL to the research branch narrative.
 - Expanded CI test coverage from MiniMOBA-only to the full package.
 - Updated result tables with `draw_rate`, `avg_towers_destroyed`, `avg_tower_hp_advantage` columns.
 
