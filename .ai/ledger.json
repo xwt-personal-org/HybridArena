@@ -1,37 +1,35 @@
 {
   "schema_version": "wkstruc-ledger/v9",
-  "task_id": "release-portfolio-rlmoba-claim-boundary-20260519",
-  "state": "NEEDS_REVIEW",
+  "task_id": "iter-cpp-onnxruntime-validation-20260519",
+  "state": "NEEDS_WEB",
   "progress": {
     "done": 4,
-    "total": 4,
-    "label": "4 / 4 stable display steps"
+    "total": 6,
+    "label": "4 / 6 deployment validation steps; external deps missing"
   },
   "last_run": {
-    "at": "2026-05-20T00:06:54.7347975-07:00",
+    "at": "2026-05-20T00:19:35.6228630-07:00",
     "agent": "codex-local-execution-agent",
-    "summary": "Stable portfolio display branch created from claim-boundary review baseline. Portfolio demo guide and C/D/E reference roadmap were added. Stable validation passed; CMake, ONNXRUNTIME_ROOT, and TensorRT evidence gaps remain open."
+    "summary": "Topic B deployment status validation completed. Python deployment tests passed, but CMake and ONNXRUNTIME_ROOT are missing, so C++ configure/build/test and ONNX Runtime demo were skipped truthfully."
   },
   "validation": {
-    "status": "PASS",
+    "status": "PARTIAL",
     "commands": [
       "python -m json.tool .ai/ledger.json",
-      "python -m compileall hybrid_arena",
-      "pytest hybrid_arena/inference/tests -v",
-      "pytest hybrid_arena/qa/tests -v",
+      "python -m compileall hybrid_arena/deployment",
       "pytest hybrid_arena/deployment/tests -v",
-      "python -m hybrid_arena.scripts.qa_tournament --episodes 2 --seed 7 --output results/qa/portfolio_smoke",
       "python -m hybrid_arena.deployment.status --output results/deployment/status.json",
       "python -m json.tool results/deployment/status.json",
-      "ruff check hybrid_arena"
+      "python -m json.tool results/deployment/cpp_onnxruntime/validation.json",
+      "ruff check hybrid_arena/deployment"
     ],
-    "summary": "Stable display validation passed: compileall succeeded; inference tests 28 passed; QA tests 11 passed; deployment tests 10 passed with expected ONNX exporter warnings; portfolio QA smoke generated reports; deployment status reports CMake missing, ONNXRUNTIME_ROOT missing, TensorRT missing, cpp_inference_verified=false, and tensorrt_verified=false; ruff passed."
+    "summary": "Python-side deployment validation passed: compileall succeeded; deployment tests 10 passed with expected ONNX exporter warnings; status JSON and cpp_onnxruntime validation JSON are valid; ruff passed. CMake configure/build, observation_codec_test, and C++ ONNX Runtime demo were not run because CMake and ONNXRUNTIME_ROOT are missing."
   },
   "open_items": [
     {
       "phase": 3,
       "status": "NEEDS_WEB",
-      "item": "cmake is not installed in the current environment, so cpp_inference configure/build was not run."
+      "item": "cmake is not installed in the current environment, so cpp_inference configure/build and observation_codec_test were not run."
     },
     {
       "phase": 3,
@@ -44,7 +42,7 @@
       "item": "CUDA/TensorRT acceleration was not validated; no TensorRT speedup claim is made."
     }
   ],
-  "checkpoint_id": "checkpoint-portfolio-rlmoba-claim-boundary-20260519",
+  "checkpoint_id": "checkpoint-cpp-onnxruntime-validation-20260519",
   "last_review_report": null,
   "consumed_inbox": [
     ".ai/inbox/hybridarena-five-phase-plan-20260519.md",

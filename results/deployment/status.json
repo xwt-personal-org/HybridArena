@@ -1,0 +1,45 @@
+{
+  "cmake": {
+    "available": false,
+    "path": null,
+    "status": "missing"
+  },
+  "cpp_build_verifiable": false,
+  "cpp_inference_verification_status": "skipped",
+  "cpp_inference_verified": false,
+  "cuda": {
+    "nvcc": null,
+    "nvidia_smi": "C:\\Windows\\system32\\nvidia-smi.EXE",
+    "status": "available",
+    "torch_cuda_available": false
+  },
+  "onnxruntime_cpp": {
+    "detail": "ONNXRUNTIME_ROOT is not set",
+    "headers": false,
+    "libs": false,
+    "root": null,
+    "status": "missing"
+  },
+  "onnxruntime_root": {
+    "available": false,
+    "path": null,
+    "status": "missing"
+  },
+  "python_onnx_export": {
+    "available": true,
+    "detail": "torch.onnx export path",
+    "status": "available"
+  },
+  "python_onnxruntime": {
+    "available": true,
+    "status": "available"
+  },
+  "tensorrt": {
+    "python_module": false,
+    "status": "missing",
+    "trtexec": null
+  },
+  "tensorrt_verifiable": false,
+  "tensorrt_verification_status": "skipped",
+  "tensorrt_verified": false
+}
