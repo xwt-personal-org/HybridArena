@@ -1,0 +1,26 @@
+# HybridArena checkpoint evidence smoke config.
+# This is documentation for the tiny CPU command used by Topic A; the current
+# training CLI still receives these values via command line.
+
+task: checkpoint_evidence_smoke
+seed: 7
+algorithm: ppo
+device: cpu
+training:
+  total_timesteps: 16
+  num_steps: 8
+  num_envs: 1
+  map_size: 16
+  team_size: 2
+  max_steps: 20
+  checkpoint_dir: results/checkpoints
+  output_checkpoint: results/checkpoints/checkpoint-evidence-smoke.pt
+deployment:
+  export_mode: checkpoint_bound
+  onnx_output: results/deployment/checkpoint_onnx/policy.onnx
+qa:
+  episodes: 4
+  output: results/qa/checkpoint_eval
+claim_boundary:
+  evidence_type: tiny_checkpoint_evidence_chain
+  statement: "Tiny CPU checkpoint validates artifact wiring only, not high-skill policy quality."

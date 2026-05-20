@@ -1,5 +1,7 @@
 import pytest
+import torch
 
+from hybrid_arena.algorithms.networks import ActorCritic
 from hybrid_arena.qa.balance_report import write_reports
 from hybrid_arena.qa.scenario_matrix import TournamentScenario, default_scenarios
 from hybrid_arena.qa.tournament import make_policy_runner, run_tournament
@@ -41,6 +43,34 @@ def test_default_scenarios_use_truthful_smoke_names():
 def test_checkpoint_policy_requires_artifact():
     with pytest.raises(ValueError, match="checkpoint_path"):
         make_policy_runner("checkpoint")
+
+
+def test_checkpoint_tournament_reports_artifact(tmp_path):
+    checkpoint = tmp_path / "fixture-policy.pt"
+    torch.save({"model_state_dict": ActorCritic().state_dict()}, checkpoint)
+    result = run_tournament(
+        episodes=1,
+        seed=7,
+        scenarios=[
+            TournamentScenario(
+                name="checkpoint_smoke",
+                policy_name="checkpoint_policy",
+                opponent_name="random_baseline",
+                env_kwargs={"map_size": 16, "team_size": 2, "max_steps": 10},
+                policy_source="checkpoint",
+                policy_artifact=str(checkpoint),
+                evaluation_mode="checkpoint_bound",
+                claim_boundary="Checkpoint-bound QA only for the supplied policy artifact.",
+            )
+        ],
+    )
+    row = result["rows"][0]
+    assert result["policy_source"] == "checkpoint"
+    assert result["rating_subject"] == "checkpoint_policy"
+    assert result["evaluation_mode"] == "checkpoint_bound"
+    assert row["policy_source"] == "checkpoint"
+    assert row["policy_artifact"] == str(checkpoint)
+    assert row["evaluation_mode"] == "checkpoint_bound"
 
 
 def test_macro_adapter_smoke_reports_measured_sources():

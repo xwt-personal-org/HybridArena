@@ -1,0 +1,45 @@
+{
+  "action_contract": {
+    "flat_logits": 324,
+    "mask_semantics": "1=legal, 0=illegal",
+    "space": "MultiDiscrete([9, 4, 9])"
+  },
+  "batch_size": 1,
+  "checkpoint_load": {
+    "checkpoint_format": "network_state_dict",
+    "missing_keys": [],
+    "unexpected_keys": []
+  },
+  "checkpoint_path": "results\\checkpoints\\checkpoint-evidence-smoke.pt",
+  "checkpoint_sha256": "d064713680561a84748313a542d3fc74ef0e288e3ce80dfce421c36bfd79a1e2",
+  "device": "cpu",
+  "dynamic_axes": "batch",
+  "export_mode": "checkpoint_bound",
+  "model_sha256": "ef69765fa0cf7f6a28edaa57aa8cd2691290d514ff4ea428ba20ae2638198a0d",
+  "obs_contract": {
+    "action_mask": [
+      324
+    ],
+    "global_info": [
+      10
+    ],
+    "local_map": [
+      11,
+      11,
+      11
+    ],
+    "self_state": [
+      20
+    ],
+    "teammate_states": [
+      3,
+      15
+    ]
+  },
+  "opset": 17,
+  "output": "results\\deployment\\checkpoint_onnx\\policy.onnx",
+  "provider": "CPUExecutionProvider",
+  "seed": 7,
+  "sha256": "ef69765fa0cf7f6a28edaa57aa8cd2691290d514ff4ea428ba20ae2638198a0d",
+  "trained_policy": true
+}

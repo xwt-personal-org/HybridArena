@@ -1,0 +1,18 @@
+{
+  "atol": 0.0001,
+  "checkpoint_load": {
+    "checkpoint_format": "network_state_dict",
+    "missing_keys": [],
+    "unexpected_keys": []
+  },
+  "checkpoint_path": "results\\checkpoints\\checkpoint-evidence-smoke.pt",
+  "checkpoint_sha256": "d064713680561a84748313a542d3fc74ef0e288e3ce80dfce421c36bfd79a1e2",
+  "export_mode": "checkpoint_bound",
+  "max_abs_diff": 5.960464477539063e-08,
+  "model": "results\\deployment\\checkpoint_onnx\\policy.onnx",
+  "passed": true,
+  "provider": "CPUExecutionProvider",
+  "seed": 7,
+  "sha256": "ef69765fa0cf7f6a28edaa57aa8cd2691290d514ff4ea428ba20ae2638198a0d",
+  "trained_policy": true
+}

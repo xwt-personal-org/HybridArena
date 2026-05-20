@@ -248,7 +248,13 @@ def run_tournament(
     scenarios: list[TournamentScenario] | None = None,
 ) -> dict:
     active_scenarios = scenarios or default_scenarios()
-    rating = Rating("rule_based_smoke")
+    scenario_policy_sources = [scenario.policy_source for scenario in active_scenarios]
+    policy_subject = _single_or_mixed(scenario_policy_sources)
+    rating_subject = {
+        "rule_based": "rule_based_smoke",
+        "checkpoint": "checkpoint_policy",
+    }.get(policy_subject, "mixed_policy")
+    rating = Rating(rating_subject)
     rows: list[TournamentRow] = []
     for index, scenario in enumerate(active_scenarios):
         row = run_scenario(scenario, episodes=episodes, seed=seed + index, rating=rating)
@@ -261,7 +267,7 @@ def run_tournament(
         "episodes": episodes,
         "seed": seed,
         "rating_system": "elo",
-        "rating_subject": "rule_based_smoke",
+        "rating_subject": rating_subject,
         "policy_source": _single_or_mixed(policy_sources),
         "planner_source": _single_or_mixed(planner_sources),
         "evaluation_mode": _single_or_mixed(evaluation_modes),

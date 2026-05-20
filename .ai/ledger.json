@@ -1,33 +1,40 @@
 {
   "schema_version": "wkstruc-ledger/v9",
-  "task_id": "release-portfolio-rlmoba-claim-boundary-20260519",
+  "task_id": "iter-checkpoint-evidence-chain-20260519",
   "state": "NEEDS_REVIEW",
   "progress": {
-    "done": 4,
-    "total": 4,
-    "label": "4 / 4 stable display steps"
+    "done": 6,
+    "total": 6,
+    "label": "6 / 6 checkpoint evidence steps"
   },
   "last_run": {
-    "at": "2026-05-20T00:06:54.7347975-07:00",
+    "at": "2026-05-20T00:16:28.2804588-07:00",
     "agent": "codex-local-execution-agent",
-    "summary": "Stable portfolio display branch created from claim-boundary review baseline. Portfolio demo guide and C/D/E reference roadmap were added. Stable validation passed; CMake, ONNXRUNTIME_ROOT, and TensorRT evidence gaps remain open."
+    "summary": "Topic A checkpoint evidence chain completed with a CPU tiny-train checkpoint, checkpoint-bound ONNX export, ONNX Runtime CPU parity, checkpoint-mode QA tournament reports, and explicit claim boundaries."
   },
   "validation": {
     "status": "PASS",
     "commands": [
       "python -m json.tool .ai/ledger.json",
       "python -m compileall hybrid_arena",
-      "pytest hybrid_arena/inference/tests -v",
+      "python -m hybrid_arena.scripts.train --algo ppo --seed 7 --total-timesteps 16 --num-steps 8 --num-envs 1 --map-size 16 --team-size 2 --max-steps 20 --device cpu --checkpoint-dir results/checkpoints --save-interval 16",
+      "Copy-Item results/checkpoints/ppo_seed7_step16.pt results/checkpoints/checkpoint-evidence-smoke.pt -Force",
+      "pytest hybrid_arena/training/tests -v",
       "pytest hybrid_arena/qa/tests -v",
       "pytest hybrid_arena/deployment/tests -v",
-      "python -m hybrid_arena.scripts.qa_tournament --episodes 2 --seed 7 --output results/qa/portfolio_smoke",
-      "python -m hybrid_arena.deployment.status --output results/deployment/status.json",
-      "python -m json.tool results/deployment/status.json",
+      "python -m hybrid_arena.deployment.export_onnx --checkpoint results/checkpoints/checkpoint-evidence-smoke.pt --export-mode checkpoint_bound --output results/deployment/checkpoint_onnx/policy.onnx --seed 7",
+      "python -m hybrid_arena.deployment.onnx_validate --model results/deployment/checkpoint_onnx/policy.onnx --seed 7",
+      "python -m hybrid_arena.scripts.qa_tournament --episodes 4 --seed 7 --output results/qa/checkpoint_eval --policy-source checkpoint --checkpoint results/checkpoints/checkpoint-evidence-smoke.pt",
       "ruff check hybrid_arena"
     ],
-    "summary": "Stable display validation passed: compileall succeeded; inference tests 28 passed; QA tests 11 passed; deployment tests 10 passed with expected ONNX exporter warnings; portfolio QA smoke generated reports; deployment status reports CMake missing, ONNXRUNTIME_ROOT missing, TensorRT missing, cpp_inference_verified=false, and tensorrt_verified=false; ruff passed."
+    "summary": "Topic A validation passed: compileall succeeded; tiny CPU train produced results/checkpoints/checkpoint-evidence-smoke.pt; training tests 30 passed; QA tests 12 passed; deployment tests 10 passed with expected ONNX exporter warnings; checkpoint-bound export metadata recorded checkpoint_sha256=d064713680561a84748313a542d3fc74ef0e288e3ce80dfce421c36bfd79a1e2; ONNX parity passed with max_abs_diff=5.960464477539063e-08; checkpoint QA reports were generated; ruff passed."
   },
   "open_items": [
+    {
+      "phase": "Topic A",
+      "status": "NEEDS_REVIEW",
+      "item": "checkpoint-evidence-smoke.pt is a 16-timestep CPU tiny-train checkpoint for evidence-chain validation only; it is not a high-skill trained policy."
+    },
     {
       "phase": 3,
       "status": "NEEDS_WEB",
@@ -44,7 +51,7 @@
       "item": "CUDA/TensorRT acceleration was not validated; no TensorRT speedup claim is made."
     }
   ],
-  "checkpoint_id": "checkpoint-portfolio-rlmoba-claim-boundary-20260519",
+  "checkpoint_id": "checkpoint-evidence-chain-20260519",
   "last_review_report": null,
   "consumed_inbox": [
     ".ai/inbox/hybridarena-five-phase-plan-20260519.md",

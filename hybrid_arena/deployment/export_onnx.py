@@ -90,7 +90,7 @@ def _extract_state_dict(checkpoint: Any) -> tuple[Mapping[str, torch.Tensor], st
         return checkpoint.state_dict(), "module"
     if not isinstance(checkpoint, Mapping):
         raise ValueError("checkpoint must be a state_dict or mapping with model weights")
-    for key in ("model_state_dict", "policy_state_dict", "actor_critic"):
+    for key in ("model_state_dict", "network_state_dict", "policy_state_dict", "actor_critic"):
         value = checkpoint.get(key)
         if isinstance(value, nn.Module):
             return value.state_dict(), key
