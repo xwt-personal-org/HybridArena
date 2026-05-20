@@ -6,15 +6,15 @@ import numpy as np
 
 from hybrid_arena.inference.adapter import MacroActionAdapter
 from hybrid_arena.inference.llm_planner import DummyLLMClient, LLMPlanner
-from hybrid_arena.inference.macro_actions import validate_macro_action
+from hybrid_arena.inference.macro_actions import canonical_macro_action, validate_macro_action
 from hybrid_arena.inference.planner_state import summarize_game_state
 from hybrid_arena.inference.rule_planner import RulePlanner
 from hybrid_arena.minimoba.env import parallel_env
 
 
 def test_macro_action_validation():
-    assert validate_macro_action("group_mid") == "group_mid"
-    assert validate_macro_action("bad_action") == "group_mid"
+    assert validate_macro_action("GROUP_MID") == "GROUP_MID"
+    assert canonical_macro_action("group_mid", allow_aliases=True) == "GROUP_MID"
 
 
 def test_summarize_game_state_returns_serializable_state():
@@ -44,7 +44,7 @@ def test_llm_planner_with_dummy_client():
 
     action = LLMPlanner(DummyLLMClient(), model_name="dummy").plan(state)
 
-    assert action == "group_mid"
+    assert action == "GROUP_MID"
 
 
 def test_macro_action_adapter_outputs_valid_action():

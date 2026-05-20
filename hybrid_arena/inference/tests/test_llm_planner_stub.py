@@ -20,6 +20,20 @@ def test_invalid_llm_decision_rejected():
         validate_llm_decision({"macro_action": "GROUP_MID"})
 
 
+@pytest.mark.parametrize("macro_action", ["DROP_TABLE", "UNKNOWN_ACTION", ""])
+def test_invalid_llm_macro_action_fails_closed(macro_action):
+    payload = json.loads(StubLLMProvider(macro_action).generate("prompt"))
+    with pytest.raises(ValueError):
+        validate_llm_decision(payload)
+
+
+def test_non_string_llm_macro_action_fails_closed():
+    payload = json.loads(StubLLMProvider("GROUP_MID").generate("prompt"))
+    payload["macro_action"] = 123
+    with pytest.raises(ValueError, match="string"):
+        validate_llm_decision(payload)
+
+
 def test_llm_json_bias_fields_must_be_numeric():
     payload = json.loads(StubLLMProvider("GROUP_MID").generate("prompt"))
     payload["reward_bias"] = {"kill": "high"}

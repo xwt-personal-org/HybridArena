@@ -52,7 +52,7 @@ class StubLLMProvider:
 
 class DummyLLMClient(StubLLMProvider):
     def __init__(self):
-        super().__init__("group_mid")
+        super().__init__("GROUP_MID")
 
 
 def validate_llm_decision(payload: dict[str, Any]) -> dict[str, Any]:
@@ -60,7 +60,7 @@ def validate_llm_decision(payload: dict[str, Any]) -> dict[str, Any]:
     missing = required.difference(payload)
     if missing:
         raise ValueError(f"Missing LLM decision fields: {sorted(missing)}")
-    macro_action = validate_macro_action(str(payload["macro_action"]))
+    macro_action = validate_macro_action(payload["macro_action"], allow_aliases=False)
     if not isinstance(payload["reasoning"], str):
         raise ValueError("reasoning must be a string")
     for field_name in ("reward_bias", "action_mask_bias"):
@@ -71,7 +71,7 @@ def validate_llm_decision(payload: dict[str, Any]) -> dict[str, Any]:
                 raise ValueError(f"{field_name} entries must be numeric")
     return {
         "macro_action": macro_action,
-        "canonical_macro_action": canonical_macro_action(macro_action),
+        "canonical_macro_action": canonical_macro_action(macro_action, allow_aliases=False),
         "reasoning": payload["reasoning"],
         "reward_bias": dict(payload["reward_bias"]),
         "action_mask_bias": dict(payload["action_mask_bias"]),

@@ -1,28 +1,43 @@
 {
   "schema_version": "wkstruc-ledger/v9",
   "task_id": "iter-five-phase-industrial-rlmoba-20260519",
-  "state": "IN_PROGRESS",
+  "state": "NEEDS_REVIEW",
   "progress": {
     "done": 5,
     "total": 5,
     "label": "5 / 5 phases"
   },
   "last_run": {
-    "at": "2026-05-19T22:55:18.2343240-07:00",
+    "at": "2026-05-19T23:20:01.8520435-07:00",
     "agent": "codex-local-execution-agent",
-    "summary": "Review-findings patch started: closing P0-P3 claim-boundary findings while preserving Phase 3 environment open items."
+    "summary": "P0-P3 review findings closed: LLM macro actions fail closed, QA reports policy/planner sources truthfully, ONNX metadata separates contract-smoke from checkpoint-bound evidence, deployment capability status is explicit, and claim-boundary docs/tests are in place."
   },
   "validation": {
     "status": "PASS",
     "commands": [
-      "python -m compileall hybrid_arena/qa hybrid_arena/scripts/qa_tournament.py",
+      "python -m json.tool .ai/ledger.json",
+      "python -m compileall hybrid_arena",
+      "ruff check hybrid_arena",
+      "pytest hybrid_arena/inference/tests/test_llm_planner_stub.py -v",
+      "pytest hybrid_arena/inference/tests/test_macro_action_adapter.py -v",
+      "pytest hybrid_arena/inference/tests -v",
+      "pytest hybrid_arena/qa/tests/test_tournament.py -v",
+      "pytest hybrid_arena/qa/tests/test_regression_gates.py -v",
+      "pytest hybrid_arena/qa/tests/test_claim_boundaries.py -v",
       "pytest hybrid_arena/qa/tests -v",
       "python -m hybrid_arena.scripts.qa_tournament --episodes 4 --seed 7 --output results/qa/smoke",
+      "python -m hybrid_arena.scripts.qa_tournament --episodes 2 --seed 7 --output results/qa/claim_boundary_smoke",
+      "pytest hybrid_arena/deployment/tests/test_deployment_status.py -v",
+      "pytest hybrid_arena/deployment/tests -v",
+      "python -m hybrid_arena.deployment.export_onnx --output artifacts/policy-contract-smoke.onnx --seed 7 --export-mode contract_smoke",
+      "python -m hybrid_arena.deployment.onnx_validate --model artifacts/policy-contract-smoke.onnx --seed 7",
+      "python -m hybrid_arena.deployment.status --output results/deployment/status.json",
+      "python -m json.tool results/deployment/status.json",
+      "Get-ChildItem docs,results/qa/claim_boundary_smoke -Recurse -File | Select-String -Pattern \"Claim Boundary\"",
       "pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/services/api hybrid_arena/scripts/tests -v",
-      "pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v",
-      "ruff check hybrid_arena"
+      "pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v"
     ],
-    "summary": "Phase 5 validation passed. QA tests 5 passed. Tournament smoke produced JSON/CSV/Markdown under results/qa/smoke with Elo final_rating=1019.096194169577 and objective metrics present. AgentBench/core/scenarios/API/scripts regression tests 40 passed. MiniMOBA/training/algorithms regression tests 103 passed, 1 skipped. compileall and ruff passed."
+    "summary": "CPU validations passed. Inference tests 28 passed. QA tests 11 passed. Deployment tests 10 passed with expected ONNX exporter warnings. AgentBench/core/scenarios/API/scripts regression tests 40 passed. MiniMOBA/training/algorithms regression tests 103 passed, 1 skipped. QA smoke reports include rule_based/smoke policy metadata and claim boundaries. Deployment status reports CMake missing, ONNXRUNTIME_ROOT missing, TensorRT missing, cpp_inference_verified=false, and tensorrt_verified=false."
   },
   "open_items": [
     {
@@ -41,10 +56,19 @@
       "item": "CUDA/TensorRT acceleration was not validated; no TensorRT speedup claim is made."
     }
   ],
-  "checkpoint_id": "checkpoint-five-phase-industrial-rlmoba-20260519",
+  "checkpoint_id": "checkpoint-review-findings-claim-boundary-20260519",
   "last_review_report": null,
   "consumed_inbox": [
-    ".ai/inbox/hybridarena-five-phase-plan-20260519.md"
+    ".ai/inbox/hybridarena-five-phase-plan-20260519.md",
+    ".ai/inbox/plan.md"
+  ],
+  "review_findings_closed": [
+    "P0-LLM-fail-closed",
+    "P0-QA-policy-source-truthful",
+    "P1-ONNX-checkpoint-bound-metadata",
+    "P1-deployment-status-report",
+    "P2-claim-boundary-docs",
+    "P3-claim-boundary-tests"
   ],
   "phase_history": [
     {

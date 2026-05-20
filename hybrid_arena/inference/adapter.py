@@ -26,7 +26,7 @@ class MacroActionAdapter:
         return np.array(decode_action(int(valid[0])), dtype=np.int64)
 
     def to_reward_bias(self) -> dict[str, float]:
-        macro = canonical_macro_action(self.macro_action)
+        macro = canonical_macro_action(self.macro_action, allow_aliases=True)
         if macro == "DEFEND_OBJECTIVE":
             return {"death": -0.2, "tower_lost": -0.5}
         if macro == "GROUP_MID":
@@ -50,7 +50,7 @@ class MacroActionAdapter:
         return bias
 
     def _candidate_actions(self) -> list[tuple[int, int, int]]:
-        macro = canonical_macro_action(self.macro_action)
+        macro = canonical_macro_action(self.macro_action, allow_aliases=True)
         if self.macro_action == "retreat" or macro == "RETREAT_FARM":
             return [(8, 3, 8), (7, 3, 8), (6, 3, 8), (0, 3, 8)]
         if self.macro_action == "push_nearest_tower" or macro == "PUSH_LANE":
