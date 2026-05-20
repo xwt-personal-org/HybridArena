@@ -1,16 +1,16 @@
 {
   "schema_version": "wkstruc-ledger/v9",
   "task_id": "iter-five-phase-industrial-rlmoba-20260519",
-  "state": "NEEDS_REVIEW",
+  "state": "IN_PROGRESS",
   "progress": {
     "done": 5,
     "total": 5,
     "label": "5 / 5 phases"
   },
   "last_run": {
-    "at": "2026-05-19T06:12:23.7614454-07:00",
+    "at": "2026-05-19T22:55:18.2343240-07:00",
     "agent": "codex-local-execution-agent",
-    "summary": "Phase 5 completed: QA/rating/tournament loop with Elo, objective-aware regression gates, report writers, and CPU smoke tournament reports."
+    "summary": "Review-findings patch started: closing P0-P3 claim-boundary findings while preserving Phase 3 environment open items."
   },
   "validation": {
     "status": "PASS",
