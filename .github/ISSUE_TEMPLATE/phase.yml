@@ -1,0 +1,58 @@
+name: Phase / Experiment / Blocker
+about: Track an actionable phase, experiment, blocker, or maintenance task
+title: "[Phase] "
+labels: []
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options:
+        - Phase
+        - Experiment
+        - Bug
+        - Blocker
+        - Maintenance
+    validations:
+      required: true
+  - type: textarea
+    id: parent
+    attributes:
+      label: Parent Epic
+      description: Link the parent Epic issue.
+      placeholder: "Part of #"
+    validations:
+      required: true
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What should this issue accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      value: |
+        - [ ]
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation Plan
+      description: Commands, experiment configs, metrics, or manual checks.
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks / Open Questions
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence Links
+      description: PRs, logs, reports, screenshots, result files, or checkpoints.
