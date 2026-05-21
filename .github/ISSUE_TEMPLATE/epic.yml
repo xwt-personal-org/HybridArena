@@ -1,0 +1,54 @@
+name: Epic
+about: Track a long-running HybridArena research or engineering objective
+title: "[Epic] "
+labels: []
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: Background
+      description: Why does this Epic exist? What problem does it solve?
+    validations:
+      required: true
+  - type: textarea
+    id: original-goal
+    attributes:
+      label: Original Goal
+      description: State the original objective. Keep this stable unless the Epic is formally re-scoped.
+    validations:
+      required: true
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Non-goals
+      description: What is explicitly out of scope?
+    validations:
+      required: true
+  - type: textarea
+    id: success-criteria
+    attributes:
+      label: Success Criteria
+      description: How will we know this Epic is complete?
+    validations:
+      required: true
+  - type: textarea
+    id: phase-breakdown
+    attributes:
+      label: Phase Breakdown
+      description: List phase issues or planned phases.
+      value: |
+        - [ ] Phase 1:
+        - [ ] Phase 2:
+        - [ ] Phase 3:
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks / Blockers
+      description: Known risks, unresolved decisions, or dependencies.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence Links
+      description: PRs, reports, configs, checkpoints, result files, or docs.
