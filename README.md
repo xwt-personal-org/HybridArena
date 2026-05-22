@@ -21,6 +21,16 @@ HybridArena 是一个 LLM 高层规划 + 深度强化学习微操控制的混合
 | 实验系统 | train / evaluate / run_ablation CLI，checkpoint，seed sweep | 已完成 |
 | AgentBench 应用层 | JD 解析、通信 RAG、工单分诊，FastAPI + Streamlit | 已完成 |
 
+## 双主线维护边界
+
+HybridArena 采用双主线维护，但验收边界保持独立：
+
+- **MiniMOBA/RL 主线**：负责 PettingZoo 环境、324 联合动作、目标系统、RL 算法、训练/评估、LLM Planner MVP 与 ISSUE-F13 后续验证。当前重点是正式实验与训练有效性验证。
+- **AgentBench 应用层**：负责 `core`、`scenarios`、`services/api`、`agentbench_run`、reporting 与 AgentBench Demo。首版已完成，后续作为应用层独立维护。
+- **共享交付面**：README、`docs/`、ruff、全量测试和交接记录。任何变更必须说明影响哪条主线，并运行对应门禁。
+
+M0 范围冻结记录见 `docs/scope-freeze-m0.md`。
+
 ## 快速开始
 
 ```bash
@@ -122,20 +132,20 @@ streamlit run hybrid_arena/demo/app.py
 | 通信知识库 RAG Copilot | RAG、引用式回答 | JSONL corpus + token retriever + citations |
 | 网络工单分诊与评测台 | AI 评测、批处理 | rule classifier + 排障建议 + Macro-F1 |
 
-## 测试
+## 发布门禁
 
 ```bash
-# 主线（环境 + 训练 + 算法）
+# RL 主线（环境 + 训练 + 算法）
 pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v
 
 # AgentBench 应用层
 pytest hybrid_arena/core hybrid_arena/scenarios hybrid_arena/services/api hybrid_arena/scripts/tests -v
 
-# 全量
-pytest hybrid_arena/ -v
-
 # Lint
 ruff check hybrid_arena
+
+# 全量回归（M4 / 交接验收）
+pytest hybrid_arena/ -v
 ```
 
 ## 文档
@@ -144,6 +154,7 @@ ruff check hybrid_arena
 - `docs/progress.md` — 阶段进度
 - `docs/issues.md` — 问题记录
 - `docs/architecture.md` — RL 下一阶段架构设计
+- `docs/scope-freeze-m0.md` — 双主线边界、测试门禁与 M1/M2 输入清单
 - `docs/experiment-report-v0.md` — RL 实验报告
 - `docs/agentbench-architecture.md` — AgentBench 应用层架构
 - `docs/refs/` — 技术参考

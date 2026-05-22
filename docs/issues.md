@@ -11,6 +11,8 @@
   1. 先用 scripted objective policy 验证 base 可达性
   2. 检查目标奖励尺度是否与 combat reward 失衡
   3. 稳定触达 base 后再考虑 300k-500k 长训
+- Linear 跟踪：WEN-44【Epic】ISSUE-F13：验证 objective policy 与 base objective 可达性
+- 归属：M1 MiniMOBA/RL 主线稳定化；WEN-42/M0 只冻结风险边界，不在本 Epic 中修复
 - 状态：**待解决**
 
 ## 已修复的问题

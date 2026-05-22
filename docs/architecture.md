@@ -11,6 +11,16 @@
 3. 建立可复现实验系统：CLI、evaluator、checkpoint、ablation、结果表。
 4. 在稳定 RL baseline 上接入 LLM 高层 Planner MVP。
 
+## 1.1 双主线维护边界
+
+本架构文档描述 MiniMOBA/RL 主线。HybridArena 同时保留 AgentBench 应用层，但两条主线独立验收：
+
+- MiniMOBA/RL：环境、动作系统、目标系统、算法、训练/评估、LLM Planner MVP 与 ISSUE-F13 后续验证。
+- AgentBench：`core`、`scenarios`、`services/api`、CLI、reporting 与 Streamlit AgentBench demo。
+- 共享项：README、`docs/`、ruff、全量测试与交接记录。
+
+后续 M1/M2/M3/M4 范围和三类测试门禁以 `docs/scope-freeze-m0.md` 为准。
+
 ## 2. 架构总览
 
 ```mermaid

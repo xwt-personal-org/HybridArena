@@ -26,6 +26,17 @@
 
 ## 当前阶段：P0 — 代码真实性与正式实验准备
 
+### P0.0：M0 范围冻结与双主线边界
+
+M0 已冻结 HybridArena 的双主线维护边界：
+
+- MiniMOBA/RL 主线归属 M1：环境、动作系统、算法、训练/评估、ISSUE-F13。
+- AgentBench 应用层归属 M2：`core`、`scenarios`、API、CLI、reporting、demo。
+- Demo/API/docs 口径风险归属 M3。
+- 发布门禁、Linear 状态回读与最终交接归属 M4。
+
+范围冻结记录见 `docs/scope-freeze-m0.md`。M0 不实现算法或场景代码，只冻结事实基线、非目标、成功指标、测试门禁和已知风险。
+
 ### P0.1：完整运行本地验证矩阵
 
 ```bash
@@ -43,6 +54,7 @@ python -m hybrid_arena.scripts.play_planner --planner rule --max-steps 50 --rend
 
 - 现象：tower_damage 提升，但 hard_win_rate / base_exposed_rate / avg_base_damage 仍为 0
 - 方向：先用 scripted objective policy 验证 base 可达性，再决定是否进入 300k-500k 长训
+- Linear：WEN-44 单独跟踪，归属 M1 MiniMOBA/RL 稳定化
 - 详见 `docs/issues.md`
 
 ### P0.3：文档与版本口径统一
