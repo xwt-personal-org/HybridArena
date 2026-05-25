@@ -57,3 +57,6 @@ grpo_lora_weights/
 
 # Experiment outputs
 results/
+
+# Local agent archive
+.ai/
