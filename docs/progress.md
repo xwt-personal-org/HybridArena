@@ -85,3 +85,4 @@
 - `python -m compileall hybrid_arena`：通过
 - `ruff check hybrid_arena`：All checks passed
 - AgentBench CLI 三场景均已生成 JSON/Markdown report
+- WEN-43（2026-05-28）：`pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v`：105 passed, 1 skipped；train/evaluate smoke 通过，输出记录见 `docs/verification-wen-43.md`
