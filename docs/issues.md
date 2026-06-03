@@ -2,18 +2,20 @@
 
 ## 当前执行阻塞
 
-### ISSUE-F13：objective reward shaping 未产生 hard win
-
-- 严重级别：**P1（主线阻塞）**
-- 现象：tower_damage 提升，但 `hard_win_rate=0.0`、`base_exposed_rate=0.0`、`avg_base_damage=0.0`。
-- 影响：RL 训练虽有 tower damage 信号，但策略未学会推进至 base 目标。
-- 建议方向：
-  1. 先用 scripted objective policy 验证 base 可达性
-  2. 检查目标奖励尺度是否与 combat reward 失衡
-  3. 稳定触达 base 后再考虑 300k-500k 长训
-- 状态：**待解决**
+当前无执行阻塞。ISSUE-F13 长训 gate 已判定通过，允许启动下一阶段长训；见下方记录。
 
 ## 已修复的问题
+
+### ISSUE-F13：objective reward shaping 未产生 hard win
+
+- 严重级别：**P1（原主线阻塞）**
+- 原始现象：tower_damage 提升，但 `hard_win_rate=0.0`、`base_exposed_rate=0.0`、`avg_base_damage=0.0`。
+- 判定输入：WEN-44 scripted objective policy smoke，见 PR [#15](https://github.com/xwt-personal-org/HybridArena/pull/15)，证据 commit `4d1595c2ddfe4cd5649dec732368064e6b918b6a`。
+- 记录指标：`hard_win_rate=1.0`、`base_exposed_rate=1.0`、`avg_base_damage=2000.0`、`tower_damage=2400.0`、`avg_reward_margin=29.39999999999999`、`avg_length=163.0`、`terminal_reasons=[base_destroyed, base_destroyed, base_destroyed]`、`conclusion=通过`。
+- 长训 gate 结论：**通过**。scripted objective policy 已稳定摧毁塔并触达 base，环境 objective/base 路径可达，允许启动下一阶段 300k-500k 长训。
+- 后续处理：本次通过，无需拆分“需修环境 / 需修 reward / 需调整训练”跟进 issue；长训结果仍需单独记录 RL 是否学会 hard win。若后续长训复现失败，再按 reward 尺度或训练设置拆分新 issue。
+- WEN-44 状态：scripted objective policy 验证证据满足 ISSUE-F13 gate 判定，可进入 In Review / Done。
+- 状态：已解除长训 gate 阻塞（2026-06-02）。
 
 ### ISSUE-A3：pytest 新测试目录模块名冲突
 

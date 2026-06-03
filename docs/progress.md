@@ -30,7 +30,7 @@
 - [x] tower / base StructureState
 - [x] ObjectiveSystem + 目标奖励
 - [x] 队伍经济更新
-- [ ] **ISSUE-F13：objective shaping 未产生 hard win（待解决）**
+- [x] **ISSUE-F13：objective shaping 长训 gate 已通过**（WEN-44 scripted policy hard_win_rate=1.0；允许启动下一阶段长训）
 
 ### 算法（已完成框架）
 
@@ -86,3 +86,4 @@
 - `ruff check hybrid_arena`：All checks passed
 - AgentBench CLI 三场景均已生成 JSON/Markdown report
 - WEN-43（2026-05-28）：`pytest hybrid_arena/minimoba/tests hybrid_arena/training/tests hybrid_arena/algorithms/tests -v`：105 passed, 1 skipped；train/evaluate smoke 通过，输出记录见 `docs/verification-wen-43.md`
+- WEN-90（2026-06-02）：ISSUE-F13 长训 gate 判定通过；依据 WEN-44 PR #15 scripted policy 指标 `hard_win_rate=1.0`、`base_exposed_rate=1.0`、`avg_base_damage=2000.0`、`tower_damage=2400.0`，允许启动下一阶段长训。
